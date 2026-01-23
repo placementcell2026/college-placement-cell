@@ -1,0 +1,10 @@
+# Ignore virtual environment only
+backend/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+git add server

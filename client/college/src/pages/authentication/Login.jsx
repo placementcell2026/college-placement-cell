@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import { motion } from "framer-motion";
 import { User, Lock, Briefcase, GraduationCap, ChevronRight, Loader2 } from "lucide-react";
 import "./Login.css";
@@ -25,18 +26,28 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate network delay for effect
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
     if (!formData.phone || !formData.password || !formData.role) {
       setError("Please complete all fields to continue.");
       setIsLoading(false);
       return;
     }
 
-    console.log("Login Attempt:", formData);
-    setIsLoading(false);
-    navigate("/dashboard");
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/api/accounts/login/", formData);
+      console.log("Login Success:", response.data);
+      
+      // Store user details
+      localStorage.setItem('userRole', response.data.role);
+      localStorage.setItem('userId', response.data.user_id);
+      localStorage.setItem('user', JSON.stringify(response.data));
+
+      setIsLoading(false);
+      navigate("/home");
+    } catch (err) {
+      console.error("Login Error:", err);
+      setError(err.response?.data?.error || "Login failed. Please check your credentials.");
+      setIsLoading(false);
+    }
   };
 
   return (

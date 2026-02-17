@@ -1,23 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useOutletContext } from 'react-router-dom';
 import HomeLayout from '../layout/HomeLayout';
 
 const Home = () => {
-  const [userData, setUserData] = useState(null);
+  const { user } = useOutletContext();
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-        setUserData(JSON.parse(savedUser));
-    }
-  }, []);
-
-  if (!userData) {
-    return null; // Or a loading spinner
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <p className="text-slate-400">Loading student session...</p>
+      </div>
+    );
   }
 
   return (
     <div>
-        <HomeLayout user={userData} />
+        <HomeLayout user={user} />
     </div>
   );
 }

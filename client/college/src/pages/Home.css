@@ -450,9 +450,18 @@
   margin: 0 0 0.5rem 0;
 }
 
+
+.profile-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 /* Utilities for Colors to match Lucide Icons */
 .text-blue-400 { color: #60a5fa !important; }
 .text-purple-400 { color: #c084fc !important; }
 .text-green-400 { color: #4ade80 !important; }
 .text-orange-400 { color: #fb923c !important; }
 .text-red-400 { color: #f87171 !important; }
+

@@ -1,9 +1,35 @@
 import React from 'react';
 import { motion } from "framer-motion";
 import { Users, FileText, CheckCircle } from "lucide-react";
+import axios from 'axios';
 import "./Home.css";
 
 const Teacher = ({ user }) => {
+    const [stats, setStats] = React.useState([]);
+    const [isLoading, setIsLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const response = await axios.get("http://127.0.0.1:8000/api/teacher/dashboard/");
+                setStats(response.data.stats || []);
+            } catch (error) {
+                console.error("Error fetching teacher dashboard data:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+    }, []);
+
+    if (isLoading) {
+        return (
+            <div className="home-page flex items-center justify-center min-h-[60vh]">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+        );
+    }
     return (
         <div className="home-page">
             <section className="section">
@@ -21,21 +47,21 @@ const Teacher = ({ user }) => {
                     </motion.div>
 
                     <div className="stats-grid">
-                        <SimpleStatsCard 
-                            icon={<Users className="text-blue-400" size={24} />}
-                            label="Total Students"
-                            value="120"
-                        />
-                        <SimpleStatsCard 
-                            icon={<CheckCircle className="text-green-400" size={24} />}
-                            label="Placed Students"
-                            value="45"
-                        />
-                        <SimpleStatsCard 
-                            icon={<FileText className="text-purple-400" size={24} />}
-                            label="Pending Approvals"
-                            value="12"
-                        />
+                        {stats.map((stat, index) => {
+                            const icons = [
+                                <Users className="text-blue-400" size={24} />,
+                                <CheckCircle className="text-green-400" size={24} />,
+                                <FileText className="text-purple-400" size={24} />
+                            ];
+                            return (
+                                <SimpleStatsCard 
+                                    key={index}
+                                    icon={icons[index % icons.length]}
+                                    label={stat.label}
+                                    value={stat.value}
+                                />
+                            );
+                        })}
                     </div>
                     
                     <div className="content-grid" style={{ marginTop: '2rem' }}>

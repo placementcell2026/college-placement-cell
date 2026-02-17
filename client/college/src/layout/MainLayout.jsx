@@ -1,10 +1,32 @@
-import { Outlet, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/footer";
 
 const MainLayout = () => {
   const location = useLocation();
-  const showNavbar = location.pathname === "/home";
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+    setLoading(false);
+  }, []);
+
+  const internalPages = ["/home", "/profile", "/notifications", "/jobs", "/companies"];
+  const showNavbar = internalPages.some(path => location.pathname.startsWith(path));
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#0f172a]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -14,12 +36,13 @@ const MainLayout = () => {
         display: "flex",
         flexDirection: "column",
         color: "#e5e7eb",
+        backgroundColor: "#0f172a"
       }}
     >
-      {showNavbar && <Navbar />}
+      {showNavbar && <Navbar user={user} />}
 
       <main style={{ flex: 1, paddingTop: showNavbar ? "80px" : "0" }}>
-        <Outlet />
+        <Outlet context={{ user }} />
       </main>
 
       <Footer />

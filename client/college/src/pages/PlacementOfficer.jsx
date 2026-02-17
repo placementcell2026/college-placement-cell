@@ -1,9 +1,39 @@
 import React from 'react';
 import { motion } from "framer-motion";
 import { Briefcase, Building, Users } from "lucide-react";
+import axios from 'axios';
 import "./Home.css";
 
 const PlacementOfficer = ({ user }) => {
+    const [stats, setStats] = React.useState([]);
+    const [isLoading, setIsLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const response = await axios.get("http://127.0.0.1:8000/api/placement/dashboard/");
+                setStats(response.data.stats || []);
+            } catch (error) {
+                console.error("Error fetching placement officer dashboard data:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDashboardData();
+
+    }, []);
+
+        console.log("status",stats);
+        
+
+    if (isLoading) {
+        return (
+            <div className="home-page flex items-center justify-center min-h-[60vh]">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+        );
+    }
     return (
         <div className="home-page">
             <section className="section">
@@ -21,21 +51,21 @@ const PlacementOfficer = ({ user }) => {
                     </motion.div>
 
                     <div className="stats-grid">
-                        <SimpleStatsCard 
-                            icon={<Building className="text-blue-400" size={24} />}
-                            label="Active Drives"
-                            value="5"
-                        />
-                        <SimpleStatsCard 
-                            icon={<Briefcase className="text-orange-400" size={24} />}
-                            label="Companies"
-                            value="50"
-                        />
-                        <SimpleStatsCard 
-                            icon={<Users className="text-green-400" size={24} />}
-                            label="Students Registered"
-                            value="500"
-                        />
+                        {stats.map((stat, index) => {
+                            const icons = [
+                                <Building className="text-blue-400" size={24} />,
+                                <Briefcase className="text-orange-400" size={24} />,
+                                <Users className="text-green-400" size={24} />
+                            ];
+                            return (
+                                <SimpleStatsCard 
+                                    key={index}
+                                    icon={icons[index % icons.length]}
+                                    label={stat.label}
+                                    value={stat.value}
+                                />
+                            );
+                        })}
                     </div>
 
                     <div className="content-grid" style={{ marginTop: '2rem' }}>

@@ -65,24 +65,24 @@ const Navbar = () => {
 
             {/* Profile & Notifications */}
             <div className="user-actions">
-              <button className="icon-btn">
+              <Link to="/notifications" className="icon-btn">
                 <Bell size={20} />
                 <span className="notification-dot" />
-              </button>
+              </Link>
 
               <div className="divider" />
 
-              <div className="profile-section">
+              <Link to="/profile" className="profile-section">
                 <div className="avatar-ring">
                   <div className="avatar">
                     <User size={18} className="text-gray-300" />
                   </div>
                 </div>
-                <button onClick={handleLogout} className="logout-btn">
+              </Link>
+                <button onClick={(e) => { e.stopPropagation(); handleLogout(); }} className="logout-btn">
                   Logout
                   <LogOut size={16} />
                 </button>
-              </div>
             </div>
           </div>
 

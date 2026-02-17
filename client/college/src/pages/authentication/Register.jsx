@@ -89,16 +89,6 @@ const Register = () => {
         position: formData.position,
       };
     }
-
-    if (role === "placement") {
-      return {
-        ...commonFields,
-        designation: formData.designation,
-        office_role: formData.office_role,
-        experience: formData.experience,
-        college: formData.college,
-      };
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -189,12 +179,18 @@ const Register = () => {
 
             <form onSubmit={handleSubmit} className="grid-form">
               {/* Role Selector */}
-              <Select
-                name="role"
-                value={role}
-                options={["Student", "Teacher", "Placement Cell Officer"]}
-                onChange={(e) => setRole(e.target.value.toLowerCase())}
-              />
+              <div className="form-group">
+                <select 
+                  name="role" 
+                  className="input-field select" 
+                  value={role} 
+                  onChange={(e) => setRole(e.target.value)}
+                >
+                  <option value="">Select Role</option>
+                  <option value="student">Student</option>
+                  <option value="teacher">Teacher</option>
+                </select>
+              </div>
 
               {/* Common Fields */}
               <Input icon={<User />} name="full_name" placeholder="Full Name" onChange={handleChange} />
@@ -222,15 +218,6 @@ const Register = () => {
                   <Input name="department" placeholder="Department / Branch" onChange={handleChange} />
                   <Input name="experience" placeholder="Years of Experience" onChange={handleChange} />
                   <Input name="position" placeholder="Position (HOD / Faculty)" onChange={handleChange} />
-                </>
-              )}
-
-              {role === "placement" && (
-                <>
-                  <Input name="designation" placeholder="Designation" onChange={handleChange} />
-                  <Input name="office_role" placeholder="Office Role" onChange={handleChange} />
-                  <Input name="experience" placeholder="Years of Experience" onChange={handleChange} />
-                  <Input name="college" placeholder="College Name" onChange={handleChange} />
                 </>
               )}
 

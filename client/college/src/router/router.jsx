@@ -8,6 +8,9 @@ const Home = lazy(() => import("../pages/Home"));
 const Index = lazy(() => import("../pages/Index"));
 const Login = lazy(() => import("../pages/authentication/Login"));
 const Register = lazy(() => import("../pages/authentication/Register"));
+const RegisterPCF = lazy(() => import("../pages/authentication/RegisterPCF"));
+const Notifications = lazy(() => import("../pages/Notifications"));
+const StudentProfile = lazy(() => import("../pages/StudentProfile"));
 
 const router = createBrowserRouter([
   {
@@ -26,6 +29,14 @@ const router = createBrowserRouter([
         path: "home",
         element: <Home />,
       },
+      {
+        path: "notifications",
+        element: <Notifications />,
+      },
+      {
+        path: "profile",
+        element: <StudentProfile />,
+      },
     ],
   },
     {
@@ -36,12 +47,17 @@ const router = createBrowserRouter([
     path: "/register",
     element: <Navigate to="/authentication/register" replace />,
   },
+    {
+    path: "/register-pcf",
+    element: <Navigate to="/authentication/register-pcf" replace />,
+  },
   {
     path: "/authentication",
     element: <AuthenticationLayout />,
     children: [
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
+      { path: "register-pcf", element: <RegisterPCF /> },
     ],
   },
 ]);

@@ -1,12 +1,39 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.db import transaction
-from .models import User, Student, Teacher, PlacementOfficer
+from .models import User, Student, Teacher, PlacementOfficer, SemesterResult, Job, JobApplication, Notification
+
+class SemesterResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SemesterResult
+        fields = ['semester', 'gpa', 'credits', 'backlogs']
 
 class StudentSerializer(serializers.ModelSerializer):
+    results = SemesterResultSerializer(many=True, read_only=True)
+    
     class Meta:
         model = Student
-        fields = ['dob', 'gender', 'college', 'department', 'course', 'semester', 'roll_no', 'image']
+        fields = [
+            'dob', 'gender', 'college', 'department', 'course', 'semester', 'roll_no', 'image',
+            'overall_cgpa', 'total_backlogs', 'profile_completion', 'skills', 'resume', 'results'
+        ]
+
+class JobSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Job
+        fields = '__all__'
+
+class JobApplicationSerializer(serializers.ModelSerializer):
+    job_details = JobSerializer(source='job', read_only=True)
+    
+    class Meta:
+        model = JobApplication
+        fields = ['id', 'job', 'status', 'applied_on', 'job_details']
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ['id', 'title', 'message', 'is_read', 'created_at']
 
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:

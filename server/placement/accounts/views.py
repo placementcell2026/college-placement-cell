@@ -58,7 +58,8 @@ class RegisterView(APIView):
                 return Response({
                     "message": "User registered successfully",
                     "user_id": user.phone,
-                    "role": user.role
+                    "role": user.role,
+                    "full_name": user.full_name
                 }, status=status.HTTP_201_CREATED)
             
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

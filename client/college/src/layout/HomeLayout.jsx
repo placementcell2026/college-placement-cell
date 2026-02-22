@@ -1,7 +1,7 @@
 import React from 'react';
-import Student from '../pages/Student';
-import Teacher from '../pages/Teacher';
-import PlacementOfficer from '../pages/PlacementOfficer';
+import Student from '../pages/Users/Student';
+import Teacher from '../pages/Users/Teacher';
+import PlacementOfficer from '../pages/Users/PlacementOfficer';
 
 const HomeLayout = ({ user }) => {
   const role = user?.role;

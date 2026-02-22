@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from "framer-motion";
 import { Briefcase, Building, Users } from "lucide-react";
 import axios from 'axios';
-import "./Home.css";
+import "../Home.css";
 
 const PlacementOfficer = ({ user }) => {
     const [stats, setStats] = React.useState([]);

@@ -1,27 +1,30 @@
 import React from 'react';
 import { motion } from "framer-motion";
-import { Users, FileText, CheckCircle } from "lucide-react";
+import { Users, FileText, CheckCircle, Clock } from "lucide-react";
 import axios from 'axios';
-import "./Home.css";
+import { toast } from "react-toastify";
+import "../Home.css";
 
 const Teacher = ({ user }) => {
     const [stats, setStats] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
 
-    React.useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                const response = await axios.get("http://127.0.0.1:8000/api/teacher/dashboard/");
-                setStats(response.data.stats || []);
-            } catch (error) {
-                console.error("Error fetching teacher dashboard data:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    const fetchData = async () => {
+        try {
+            const phone = user?.phone || user?.user_id;
+            const response = await axios.get(`http://127.0.0.1:8000/api/teacher/dashboard/?phone=${phone}`);
+            setStats(response.data.stats || []);
+        } catch (error) {
+            console.error("Error fetching teacher dashboard data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-        fetchDashboardData();
-    }, []);
+    React.useEffect(() => {
+        if (user) fetchData();
+    }, [user]);
+
 
     if (isLoading) {
         return (
@@ -30,6 +33,7 @@ const Teacher = ({ user }) => {
             </div>
         );
     }
+
     return (
         <div className="home-page">
             <section className="section">
@@ -51,7 +55,7 @@ const Teacher = ({ user }) => {
                             const icons = [
                                 <Users className="text-blue-400" size={24} />,
                                 <CheckCircle className="text-green-400" size={24} />,
-                                <FileText className="text-purple-400" size={24} />
+                                <Clock className="text-orange-400" size={24} />
                             ];
                             return (
                                 <SimpleStatsCard 
@@ -63,8 +67,9 @@ const Teacher = ({ user }) => {
                             );
                         })}
                     </div>
+
                     
-                    <div className="content-grid" style={{ marginTop: '2rem' }}>
+                    <div className="content-grid" style={{ marginTop: '2.5rem' }}>
                         <div className="section-header">
                             <h2 className="section-title">Quick Actions</h2>
                         </div>

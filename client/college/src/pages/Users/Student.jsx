@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from "framer-motion";
 import { 
@@ -11,13 +12,13 @@ import {
   Clock
 } from "lucide-react";
 import axios from 'axios';
-import "./Home.css";
+import { toast } from "react-toastify";
+import "../Home.css";
 
 const Student = ({ user }) => {
   const [stats, setStats] = React.useState([]);
   const [recommendedJobs, setRecommendedJobs] = React.useState([]);
   const [upcomingDrives, setUpcomingDrives] = React.useState([]);
-  const [notifications, setNotifications] = React.useState([]);
   const [studentInfo, setStudentInfo] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [applyingId, setApplyingId] = React.useState(null);
@@ -26,16 +27,12 @@ const Student = ({ user }) => {
     const fetchDashboardData = async () => {
       try {
         const phone = user?.user_id || user?.phone;
-        const [dashRes, notifRes] = await Promise.all([
-          axios.get(`http://127.0.0.1:8000/api/student/dashboard/?phone=${phone}`),
-          axios.get(`http://127.0.0.1:8000/api/student/notifications/?phone=${phone}`)
-        ]);
+        const response = await axios.get(`http://127.0.0.1:8000/api/student/dashboard/?phone=${phone}`);
         
-        setStudentInfo(dashRes.data.student_info);
-        setStats(dashRes.data.stats || []);
-        setRecommendedJobs(dashRes.data.recommended_jobs || []);
-        setUpcomingDrives(dashRes.data.upcoming_drives || []);
-        setNotifications(notifRes.data || []);
+        setStudentInfo(response.data.student_info);
+        setStats(response.data.stats || []);
+        setRecommendedJobs(response.data.recommended_jobs || []);
+        setUpcomingDrives(response.data.upcoming_drives || []);
       } catch (error) {
         console.error("Error fetching student dashboard data:", error);
         setStats([]); 
@@ -57,12 +54,9 @@ const Student = ({ user }) => {
         phone: phone,
         job_id: jobId
       });
-      alert(response.data.message || "Application submitted!");
-      
-      const notifRes = await axios.get(`http://127.0.0.1:8000/api/student/notifications/?phone=${phone}`);
-      setNotifications(notifRes.data || []);
+      toast.success(response.data.message || "Application submitted!");
     } catch (error) {
-      alert(error.response?.data?.error || "Failed to apply");
+      toast.error(error.response?.data?.error || "Failed to apply");
     } finally {
       setApplyingId(null);
     }
@@ -97,25 +91,6 @@ const Student = ({ user }) => {
 
     
 
-          {/* Notifications Section */}
-          {notifications.length > 0 && (
-            <div className="notifications-banner mb-8">
-               <div className="flex items-center gap-2 mb-2 text-blue-400">
-                  <Clock size={16} />
-                  <span className="text-sm font-semibold uppercase tracking-wider">Recent Updates</span>
-               </div>
-               <div className="space-y-2">
-                 {notifications.slice(0, 2).map(n => (
-                   <div key={n.id} className="p-3 bg-white/5 border border-white/10 rounded-lg text-sm flex justify-between items-center transition-all hover:bg-white/10">
-                     <span>{n.message}</span>
-                     <span className="text-xs text-slate-500 whitespace-nowrap ml-4">
-                       {new Date(n.created_at).toLocaleDateString()}
-                     </span>
-                   </div>
-                 ))}
-               </div>
-            </div>
-          )}
 
           {/* Stats Grid */}
           <div className="stats-grid">

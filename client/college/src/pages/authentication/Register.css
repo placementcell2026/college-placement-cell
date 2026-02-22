@@ -15,10 +15,10 @@
 }
 
 .register-card {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   border-radius: 24px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .register-header {
@@ -41,27 +41,89 @@
   gap: 1rem;
 }
 
-.file-upload {
+.file-upload-wrapper {
   grid-column: 1 / -1;
   display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.file-upload {
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.75rem;
-  background: rgba(15,23,42,0.5);
-  padding: 0.75rem;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 1rem;
   border-radius: 12px;
   border: 1px dashed #334155;
   color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 100px;
+}
+
+.file-upload:hover {
+  border-color: #60a5fa;
+  background: rgba(15, 23, 42, 0.7);
+  color: white;
+}
+
+.file-upload.has-preview {
+  padding: 0;
+  overflow: hidden;
+  border-style: solid;
 }
 
 .file-upload input {
   display: none;
 }
 
+.preview-container {
+  position: relative;
+  width: 100%;
+  height: 150px;
+}
+
+.image-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.preview-container:hover .preview-overlay {
+  opacity: 1;
+}
+
+.remove-image-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 0.875rem;
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+.remove-image-btn:hover {
+  text-decoration: underline;
+}
+
 .register-footer {
   padding: 1rem;
   text-align: center;
   color: aliceblue;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .register-footer button {
@@ -77,5 +139,7 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }

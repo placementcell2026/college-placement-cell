@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import React, { lazy } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import { Navigate } from "react-router-dom";
 import MainLayout from "../layout/MainLayout";
@@ -10,7 +10,7 @@ const Login = lazy(() => import("../pages/authentication/Login"));
 const Register = lazy(() => import("../pages/authentication/Register"));
 const RegisterPCF = lazy(() => import("../pages/authentication/RegisterPCF"));
 const Notifications = lazy(() => import("../pages/Notifications"));
-const StudentProfile = lazy(() => import("../pages/StudentProfile"));
+const StudentProfile = lazy(() => import("../pages/Users/StudentProfile"));
 
 const router = createBrowserRouter([
   {

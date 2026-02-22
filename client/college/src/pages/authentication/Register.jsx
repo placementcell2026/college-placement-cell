@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import axios from "axios";
+import { toast } from "react-toastify";
 import "./Register.css";
 
 const Register = () => {
@@ -22,7 +23,7 @@ const Register = () => {
 
   const [role, setRole] = useState("");
   const [formData, setFormData] = useState({
-    user_id: "",
+    roll_no: "",
     full_name: "",
     dob: "",
     gender: "",
@@ -32,7 +33,6 @@ const Register = () => {
     department: "",
     course: "",
     semester: "",
-    roll_no: "",
     designation: "",
     qualification: "",
     experience: "",
@@ -45,14 +45,39 @@ const Register = () => {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
-    setFormData({
-      ...formData,
-      [name]: files ? files[0] : value,
-    });
+    
+    if (name === "image" && files && files[0]) {
+      const file = files[0];
+      setFormData({ ...formData, image: file });
+      
+      // Cleanup old preview and create new one
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      setImagePreview(URL.createObjectURL(file));
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
     setError("");
+  };
+
+  const handleRemoveImage = () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImagePreview(null);
+    setFormData({ ...formData, image: null });
   };
 
   const buildPayloadByRole = () => {
@@ -68,7 +93,6 @@ const Register = () => {
     if (role === "student") {
       return {
         ...commonFields,
-        user_id: formData.user_id,
         dob: formData.dob,
         gender: formData.gender,
         college: formData.college,
@@ -101,6 +125,31 @@ const Register = () => {
       return;
     }
 
+    // New Validations
+    if (formData.phone.length !== 10 || !/^\d+$/.test(formData.phone)) {
+      setError("Mobile number must be exactly 10 digits.");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.email.toLowerCase().endsWith("@gmail.com")) {
+      setError("Please use a @gmail.com email address.");
+      setLoading(false);
+      return;
+    }
+
+    if (role === "student" && (formData.roll_no.length !== 10 || !/^\d+$/.test(formData.roll_no))) {
+      setError("Register No must be exactly 10 digits.");
+      setLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      setLoading(false);
+      return;
+    }
+
     if (formData.password !== formData.confirm_password) {
       setError("Passwords do not match.");
       setLoading(false);
@@ -125,7 +174,17 @@ const Register = () => {
       });
       console.log("Response:", response.data);
 
-      // Store user details for immediate login after registration
+      if (response.data.pending) {
+        setLoading(false);
+        setError(""); // Clear any previous error
+        setFormData({ ...formData, password: "", confirm_password: "" }); // Clear sensitive fields
+        // Show success alert/message instead of navigating
+        toast.success(response.data.message);
+        navigate("/authentication/login");
+        return;
+      }
+
+      // Store user details for immediate login after registration (only for non-pending users)
       localStorage.setItem('userRole', response.data.role);
       localStorage.setItem('userId', response.data.user_id);
       localStorage.setItem('user', JSON.stringify(response.data));
@@ -200,14 +259,13 @@ const Register = () => {
               {/* Role-specific Fields */}
               {role === "student" && (
                 <>
-                  <Input name="user_id" placeholder="User ID" onChange={handleChange} />
+                  <Input name="roll_no" placeholder="Register No" onChange={handleChange} />
                   <Input type="date" name="dob" placeholder="Date of Birth" onChange={handleChange} />
                   <Select name="gender" options={["Male", "Female"]} onChange={handleChange} />
                   <Input name="college" placeholder="College Name" onChange={handleChange} />
-                  <Input name="department" type="text" placeholder="Department / Branch" onChange={handleChange} />
+                  <Select name="department" options={["BME","EEE","EL","CM","CT","RPA"]} onChange={handleChange} />
                   <Select name="course" options={["Diploma"]} onChange={handleChange} />
-                  <Select name="semester" options={["1st","2nd","3rd","4th","5th","6th"]} placeholder="Current Semester / Year" onChange={handleChange} />
-                  <Input name="roll_no" type="text" placeholder="Enrollment / Roll Number" onChange={handleChange} />
+                  <Select name="semester" options={["1st","2nd","3rd","4th","5th","6th"]} onChange={handleChange} />
                 </>
               )}
 
@@ -215,9 +273,9 @@ const Register = () => {
                 <>
                   <Input name="designation" placeholder="Designation" onChange={handleChange} />
                   <Input name="qualification" placeholder="Highest Qualification" onChange={handleChange} />
-                  <Input name="department" placeholder="Department / Branch" onChange={handleChange} />
+                  <Select name="department" options={["BME","EEE","EL","CM","CT","RPA"]} onChange={handleChange} />
                   <Input name="experience" placeholder="Years of Experience" onChange={handleChange} />
-                  <Input name="position" placeholder="Position (HOD / Faculty)" onChange={handleChange} />
+                  <Select name="position" options={["HOD","Faculty"]} onChange={handleChange} />
                 </>
               )}
 
@@ -226,10 +284,28 @@ const Register = () => {
               <Input icon={<Lock />} type="password" name="confirm_password" placeholder="Confirm Password" onChange={handleChange} />
 
               {/* Profile Image */}
-              <div className="file-upload">
-                <ImageIcon size={18} />
-                <input type="file" name="image" accept="image/*" onChange={handleChange} />
-                <span>Upload Profile Image</span>
+              <div className="file-upload-wrapper">
+                <label className={`file-upload ${imagePreview ? 'has-preview' : ''}`}>
+                  <input type="file" name="image" accept="image/*" onChange={handleChange} />
+                  {imagePreview ? (
+                    <div className="preview-container">
+                      <img src={imagePreview} alt="Profile Preview" className="image-preview" />
+                      <div className="preview-overlay">
+                        <span>Change Image</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <ImageIcon size={18} />
+                      <span>{formData.image ? formData.image.name : "Upload Profile Image.. must be less than 2MB"}</span>
+                    </>
+                  )}
+                </label>
+                {imagePreview && (
+                  <button type="button" onClick={handleRemoveImage} className="remove-image-btn">
+                    Remove Image
+                  </button>
+                )}
               </div>
 
               {/* Submit */}

@@ -18,6 +18,11 @@ class StudentSerializer(serializers.ModelSerializer):
             'overall_cgpa', 'total_backlogs', 'profile_completion', 'skills', 'resume', 'results'
         ]
 
+    def validate_roll_no(self, value):
+        if not value.isdigit() or len(value) != 10:
+            raise serializers.ValidationError("Register Number must be exactly 10 digits.")
+        return value
+
 class JobSerializer(serializers.ModelSerializer):
     class Meta:
         model = Job
@@ -67,9 +72,22 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         fields = ['phone', 'email', 'full_name', 'role', 'password', 'student', 'teacher', 'placement']
 
     def validate_phone(self, value):
-        if not value.strip():
-            raise serializers.ValidationError("Phone number cannot be empty or just whitespace.")
-        return value.strip()
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Phone number cannot be empty.")
+        if not value.isdigit() or len(value) != 10:
+            raise serializers.ValidationError("Phone number must be exactly 10 digits.")
+        return value
+
+    def validate_email(self, value):
+        if not value.lower().endswith("@gmail.com"):
+            raise serializers.ValidationError("Only Gmail addresses (@gmail.com) are allowed.")
+        return value
+
+    def validate_password(self, value):
+        if len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters long.")
+        return value
 
     def validate_full_name(self, value):
         if not value.strip():

@@ -189,6 +189,7 @@ class Notification(models.Model):
     title = models.CharField(max_length=200)
     message = models.TextField()
     is_read = models.BooleanField(default=False)
+    extra_data = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -231,3 +232,37 @@ class PlacementOfficer(models.Model):
 
     def __str__(self):
         return f"Placement Officer - {self.user.full_name}"
+
+
+# ============================
+# REGISTRATION REQUESTS
+# ============================
+class RegistrationRequest(models.Model):
+    STATUS_CHOICES = (
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+    )
+
+    # Core User Data
+    full_name = models.CharField(max_length=150)
+    email = models.EmailField()
+    phone = models.CharField(max_length=15)
+    password = models.CharField(max_length=128) # Hashed password
+    role = models.CharField(max_length=20, default='student')
+
+    # Student Profile Data
+    dob = models.DateField()
+    gender = models.CharField(max_length=10)
+    college = models.CharField(max_length=200)
+    department = models.CharField(max_length=100)
+    course = models.CharField(max_length=50)
+    semester = models.CharField(max_length=20)
+    roll_no = models.CharField(max_length=50)
+    image = models.ImageField(upload_to='registration_requests/', null=True, blank=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Request: {self.full_name} ({self.department})"

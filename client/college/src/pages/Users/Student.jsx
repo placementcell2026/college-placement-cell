@@ -11,11 +11,13 @@ import {
   MapPin,
   Clock
 } from "lucide-react";
+import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from "react-toastify";
 import "../Home.css";
 
-const Student = ({ user }) => {
+const Student = () => {
+  const { user } = useOutletContext();
   const [stats, setStats] = React.useState([]);
   const [recommendedJobs, setRecommendedJobs] = React.useState([]);
   const [upcomingDrives, setUpcomingDrives] = React.useState([]);

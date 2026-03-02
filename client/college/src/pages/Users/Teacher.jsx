@@ -1,11 +1,13 @@
 import React from 'react';
 import { motion } from "framer-motion";
 import { Users, FileText, CheckCircle, Clock } from "lucide-react";
+import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from "react-toastify";
 import "../Home.css";
 
-const Teacher = ({ user }) => {
+const Teacher = () => {
+    const { user } = useOutletContext();
     const [stats, setStats] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
 

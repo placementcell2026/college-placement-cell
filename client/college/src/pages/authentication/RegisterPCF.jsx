@@ -85,7 +85,7 @@ const RegisterPCF = () => {
       localStorage.setItem('user', JSON.stringify(response.data));
 
       setLoading(false);
-      navigate("/home");
+      navigate("/home/placement");
     } catch (err) {
        console.error("Registration Error:", err);
        setError(err.response?.data?.error || "Registration failed. Please try again.");

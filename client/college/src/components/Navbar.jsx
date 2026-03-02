@@ -13,10 +13,14 @@ import {
 } from "lucide-react";
 import "./Navbar.css";
 
-const Navbar = () => {
+const Navbar = ({ user }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
+
+  const userRole = user?.role?.toLowerCase() || 'student';
+  const homePath = `/home/${userRole}`;
+  const profilePath = `/profile/${userRole}`;
 
   // Handle scroll effect
   useEffect(() => {
@@ -28,13 +32,13 @@ const Navbar = () => {
   }, []);
 
   const navLinks = [
-    { name: "Home", path: "/home", icon: <Home size={18} /> },
+    { name: "Home", path: homePath, icon: <Home size={18} /> },
     { name: "Jobs", path: "/jobs", icon: <Briefcase size={18} /> },
     { name: "Companies", path: "/companies", icon: <Building2 size={18} /> },
   ];
 
   const handleLogout = () => {
-    // TODO: Clear auth tokens
+    localStorage.clear();
     navigate("/authentication/login");
   };
 
@@ -47,7 +51,7 @@ const Navbar = () => {
       <div className="nav-container">
         <div className="nav-content">
           {/* Logo */}
-          <Link to="/home" className="logo-link group">
+          <Link to={homePath} className="logo-link group">
             <div className="logo-icon">C</div>
             <span className="logo-text">Placement Cell</span>
           </Link>
@@ -72,7 +76,7 @@ const Navbar = () => {
 
               <div className="divider" />
 
-              <Link to="/profile" className="profile-section">
+              <Link to={profilePath} className="profile-section">
                 <div className="avatar-ring">
                   <div className="avatar">
                     <User size={18} className="text-gray-300" />
@@ -114,6 +118,14 @@ const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
+              <Link
+                to={profilePath}
+                onClick={() => setIsOpen(false)}
+                className="mobile-link"
+              >
+                <User size={18} />
+                Profile
+              </Link>
               <div className="mobile-divider" />
               <button onClick={handleLogout} className="mobile-logout">
                 <LogOut size={18} />

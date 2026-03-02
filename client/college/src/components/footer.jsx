@@ -1,4 +1,4 @@
-import { Github, Twitter, Linkedin, Mail, Heart } from "lucide-react";
+import { Github, Twitter, Linkedin, Mail, Heart, Instagram } from "lucide-react";
 import "./Footer.css";
 
 const Footer = () => {
@@ -17,7 +17,7 @@ const Footer = () => {
               world-class opportunities and guidance.
             </p>
             <div className="social-links">
-              <SocialIcon icon={<Github size={18} />} />
+              <SocialIcon icon={<Instagram size={18} />} />
               <SocialIcon icon={<Twitter size={18} />} />
               <SocialIcon icon={<Linkedin size={18} />} />
             </div>
@@ -51,10 +51,10 @@ const Footer = () => {
             <ul className="footer-links">
               <li className="contact-item">
                 <Mail size={16} className="contact-icon" />
-                <span>support@placement.edu</span>
+                <span>placementcellkkmmptc@gmail.com</span>
               </li>
-              <li className="contact-item">123 University Avenue</li>
-              <li className="contact-item">Tech District, CA 94043</li>
+              <li className="contact-item">KKMMPTC KALLETTUMKARA</li>
+              <li className="contact-item">Thrissur District</li>
             </ul>
           </div>
         </div>
@@ -62,7 +62,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="footer-bottom">
           <p className="copyright">
-            © {new Date().getFullYear()} College Placement Cell. All rights
+            © {new Date().getFullYear()} College Placement Cell Project. All rights
             reserved.
           </p>
           <div className="made-with">

@@ -11,6 +11,10 @@ const Register = lazy(() => import("../pages/authentication/Register"));
 const RegisterPCF = lazy(() => import("../pages/authentication/RegisterPCF"));
 const Notifications = lazy(() => import("../pages/Notifications"));
 const StudentProfile = lazy(() => import("../pages/Users/StudentProfile"));
+const Jobs = lazy(() => import("../pages/Jobs"));
+const Student = lazy(() => import("../pages/Users/Student"));
+const Teacher = lazy(() => import("../pages/Users/Teacher"));
+const PlacementOfficer = lazy(() => import("../pages/Users/PlacementOfficer"));
 
 const router = createBrowserRouter([
   {
@@ -27,7 +31,12 @@ const router = createBrowserRouter([
       },
       {
         path: "home",
-        element: <Home />,
+        children: [
+          { index: true, element: <Home /> },
+          { path: "student", element: <Student /> },
+          { path: "teacher", element: <Teacher /> },
+          { path: "placement", element: <PlacementOfficer /> },
+        ]
       },
       {
         path: "notifications",
@@ -35,7 +44,16 @@ const router = createBrowserRouter([
       },
       {
         path: "profile",
-        element: <StudentProfile />,
+        children: [
+          { index: true, element: <StudentProfile /> },
+          { path: "student", element: <StudentProfile /> },
+          { path: "teacher", element: <StudentProfile /> },
+          { path: "placement", element: <StudentProfile /> },
+        ]
+      },
+      {
+        path: "jobs",
+        element: <Jobs />,
       },
     ],
   },

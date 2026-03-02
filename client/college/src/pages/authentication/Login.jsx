@@ -41,7 +41,8 @@ const Login = () => {
       localStorage.setItem('user', JSON.stringify(response.data));
 
       setIsLoading(false);
-      navigate("/home");
+      const role = response.data.role?.toLowerCase();
+      navigate(`/home/${role}`);
     } catch (err) {
       console.error("Login Error:", err);
       setError(err.response?.data?.error || "Login failed. Please check your credentials.");

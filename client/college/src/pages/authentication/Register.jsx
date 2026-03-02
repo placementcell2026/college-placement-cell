@@ -190,7 +190,7 @@ const Register = () => {
       localStorage.setItem('user', JSON.stringify(response.data));
 
       setLoading(false);
-      navigate("/home");
+      navigate(`/home/${response.data.role?.toLowerCase()}`);
     } catch (err) {
        console.error("Registration Error:", err);
        

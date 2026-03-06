@@ -15,13 +15,14 @@ import {
   X,
   Trash2
 } from "lucide-react";
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from "react-toastify";
 import "../Home.css";
 
 const PlacementOfficer = () => {
     const { user } = useOutletContext();
+    const navigate = useNavigate();
     const [stats, setStats] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeJobs, setActiveJobs] = useState([]);
@@ -131,12 +132,22 @@ const PlacementOfficer = () => {
     const handleStatClick = async (label) => {
         if (label === "Active Drives") return;
         
+        if (label === "Departments") {
+            navigate("/home/placement/departments");
+            return;
+        }
+        
         setStatsModalType(label);
         setShowStatsModal(true);
         setIsStatsLoading(true);
         
         try {
-            const endpoint = label === "Students Registered" ? "students/" : "applications/";
+            let endpoint;
+            if (label === "Students Registered") {
+                endpoint = "students/";
+            } else {
+                endpoint = "applications/";
+            }
             const res = await axios.get(`http://127.0.0.1:8000/api/placement/${endpoint}`);
             setStatsModalData(res.data);
         } catch (error) {
@@ -149,7 +160,12 @@ const PlacementOfficer = () => {
 
     const handleDownloadStatsPDF = async () => {
         try {
-            const endpoint = statsModalType === "Students Registered" ? "students/export/" : "applications/export/";
+            let endpoint;
+            if (statsModalType === "Students Registered") {
+                endpoint = "students/export/";
+            } else {
+                endpoint = "applications/export/";
+            }
             const res = await axios.get(`http://127.0.0.1:8000/api/placement/${endpoint}`, {
                 responseType: 'blob'
             });
@@ -205,7 +221,8 @@ const PlacementOfficer = () => {
                             const icons = [
                                 <Building className="text-blue-400" size={24} />,
                                 <Briefcase className="text-orange-400" size={24} />,
-                                <Users className="text-green-400" size={24} />
+                                <Users className="text-green-400" size={24} />,
+                                <MapPin className="text-purple-400" size={24} />
                             ];
                             return (
                                 <SimpleStatsCard 

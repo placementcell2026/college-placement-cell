@@ -68,6 +68,8 @@ const StudentProfile = () => {
             semester: data.semester || '',
             roll_no: data.roll_no || '',
             skills: data.skills || '',
+            overall_cgpa: data.overall_cgpa || '',
+            total_backlogs: data.total_backlogs || '',
           });
         } else if (isTeacher) {
           Object.assign(initialForm, {
@@ -285,6 +287,14 @@ const StudentProfile = () => {
                       <div className="input-group">
                         <label>Roll Number</label>
                         <input type="text" name="roll_no" value={formData.roll_no || ''} onChange={handleInputChange} className="profile-input" />
+                      </div>
+                      <div className="input-group">
+                        <label>Overall CGPA</label>
+                        <input type="number" step="0.01" min="0" max="10" name="overall_cgpa" value={formData.overall_cgpa || ''} onChange={handleInputChange} className="profile-input" placeholder="0.00" />
+                      </div>
+                      <div className="input-group">
+                        <label>Total Backlogs</label>
+                        <input type="number" min="0" name="total_backlogs" value={formData.total_backlogs || ''} onChange={handleInputChange} className="profile-input" placeholder="0" />
                       </div>
                     </>
                   )}

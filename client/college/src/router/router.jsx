@@ -15,6 +15,7 @@ const Jobs = lazy(() => import("../pages/Jobs"));
 const Student = lazy(() => import("../pages/Users/Student"));
 const Teacher = lazy(() => import("../pages/Users/Teacher"));
 const PlacementOfficer = lazy(() => import("../pages/Users/PlacementOfficer"));
+const ManageDepartments = lazy(() => import("../pages/Users/ManageDepartments"));
 
 const router = createBrowserRouter([
   {
@@ -35,7 +36,13 @@ const router = createBrowserRouter([
           { index: true, element: <Home /> },
           { path: "student", element: <Student /> },
           { path: "teacher", element: <Teacher /> },
-          { path: "placement", element: <PlacementOfficer /> },
+          { 
+            path: "placement", 
+            children: [
+              { index: true, element: <PlacementOfficer /> },
+              { path: "departments", element: <ManageDepartments /> }
+            ]
+          },
         ]
       },
       {

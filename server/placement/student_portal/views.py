@@ -135,10 +135,20 @@ class StudentProfileView(APIView):
             
             # Simple manual mapping for profile update
             # In a more complex app, we'd use a dedicated UpdateSerializer
-            fields = ['dob', 'gender', 'college', 'department', 'course', 'semester', 'roll_no', 'skills']
+            # Robust mapping to handle empty strings for numeric and date fields
+            fields = ['dob', 'gender', 'college', 'department', 'course', 'semester', 'roll_no', 'skills', 'overall_cgpa', 'total_backlogs']
             for field in fields:
                 if field in request.data:
-                    setattr(student, field, request.data.get(field))
+                    val = request.data.get(field)
+                    
+                    # Handle empty strings for specific field types
+                    if val == '':
+                        if field in ['overall_cgpa', 'total_backlogs']:
+                            val = 0
+                        elif field == 'dob':
+                            continue # Skip empty DOB to avoid validation error
+                    
+                    setattr(student, field, val)
             
             if 'image' in request.FILES:
                 student.image = request.FILES['image']

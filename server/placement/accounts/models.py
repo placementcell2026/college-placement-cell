@@ -150,6 +150,10 @@ class Job(models.Model):
     max_backlogs = models.IntegerField(default=0)
     allowed_departments = models.TextField(help_text="Comma separated departments")
     
+    qualification = models.CharField(max_length=200, blank=True, null=True)
+    responsibilities = models.TextField(blank=True, null=True)
+    requirements = models.TextField(blank=True, null=True)
+    
     posted_on = models.DateTimeField(auto_now_add=True)
     deadline = models.DateTimeField()
 

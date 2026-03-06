@@ -108,6 +108,7 @@ class RegisterView(APIView):
                 }, status=status.HTTP_201_CREATED)
 
             # For others (Teacher/Placement), use standard serializer
+            print("Registering non-student user. Data:", data)
             serializer = UserRegistrationSerializer(data=data)
             if serializer.is_valid():
                 user = serializer.save()
@@ -118,6 +119,7 @@ class RegisterView(APIView):
                     "full_name": user.full_name
                 }, status=status.HTTP_201_CREATED)
             
+            print("Serializer Errors:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             traceback.print_exc()
@@ -176,7 +178,7 @@ class LoginView(APIView):
 
         if user:
             if role and user.role != role:
-                 return Response({'error': f'Invalid role. You are registered as {user.role}'}, status=status.HTTP_401_UNAUTHORIZED)
+                 return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
             
             return Response({
                 "message": "Login successful",

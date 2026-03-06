@@ -137,3 +137,42 @@ class RejectRegistrationView(APIView):
             return Response({"message": "Registration request rejected successfully"})
         except RegistrationRequest.DoesNotExist:
             return Response({"error": "Registration request not found or already processed"}, status=status.HTTP_404_NOT_FOUND)
+
+class TeacherProfileView(APIView):
+    def get(self, request):
+        phone = request.query_params.get('phone')
+        try:
+            teacher = Teacher.objects.get(user__phone=phone)
+            data = {
+                "full_name": teacher.user.full_name,
+                "email": teacher.user.email,
+                "phone": teacher.user.phone,
+                "designation": teacher.designation,
+                "qualification": teacher.qualification,
+                "department": teacher.department,
+                "experience": teacher.experience,
+                "position": teacher.position,
+                "image": teacher.image.url if teacher.image else None,
+            }
+            return Response(data)
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    def patch(self, request):
+        phone = request.data.get('phone')
+        try:
+            teacher = Teacher.objects.get(user__phone=phone)
+            fields = ['designation', 'qualification', 'department', 'experience', 'position']
+            for field in fields:
+                if field in request.data:
+                    setattr(teacher, field, request.data.get(field))
+            
+            if 'image' in request.FILES:
+                teacher.image = request.FILES['image']
+                
+            teacher.save()
+            return Response({"message": "Profile updated successfully"})
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

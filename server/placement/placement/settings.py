@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-)2*4g8&r%49&#$3@_!$j1d5vzc4j5cltyfqbr7c6jc$!*w4+p@
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'placement_portal',
     'rest_framework',
     'corsheaders',
+    'captcha',
 ]
 
 MIDDLEWARE = [

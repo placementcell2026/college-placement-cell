@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.db import transaction
-from .models import User, Student, Teacher, PlacementOfficer, SemesterResult, Job, JobApplication, Notification
+from .models import User, Student, Teacher, PlacementOfficer, SemesterResult, Job, JobApplication, Notification, Interview
 
 class SemesterResultSerializer(serializers.ModelSerializer):
     class Meta:
@@ -40,6 +40,25 @@ class NotificationSerializer(serializers.ModelSerializer):
         model = Notification
         fields = ['id', 'title', 'message', 'is_read', 'created_at']
 
+class StudentSimpleSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='user.full_name', read_only=True)
+    phone = serializers.CharField(source='user.phone', read_only=True)
+    email = serializers.CharField(source='user.email', read_only=True)
+    
+    class Meta:
+        model = Student
+        fields = ['id', 'full_name', 'phone', 'email', 'roll_no', 'department', 'semester']
+
+class InterviewSerializer(serializers.ModelSerializer):
+    selected_students_details = StudentSimpleSerializer(source='selected_students', many=True, read_only=True)
+    
+    class Meta:
+        model = Interview
+        fields = '__all__'
+        extra_kwargs = {
+            'created_by': {'required': False, 'allow_null': True}
+        }
+
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
@@ -66,10 +85,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     student = StudentSerializer(required=False)
     teacher = TeacherSerializer(required=False)
     placement = PlacementOfficerSerializer(required=False)
+    dept_code = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = User
-        fields = ['phone', 'email', 'full_name', 'role', 'password', 'student', 'teacher', 'placement']
+        fields = ['phone', 'email', 'full_name', 'role', 'password', 'student', 'teacher', 'placement', 'dept_code']
 
     def validate_phone(self, value):
         value = value.strip()
@@ -87,6 +107,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def validate_password(self, value):
         if len(value) < 8:
             raise serializers.ValidationError("Password must be at least 8 characters long.")
+        if not any(char.isupper() for char in value):
+            raise serializers.ValidationError("Password must contain at least one uppercase letter (A-Z).")
+        if not any(char.islower() for char in value):
+            raise serializers.ValidationError("Password must contain at least one lowercase letter (a-z).")
+        if not any(char in "@!#$%^&*()_+-=[]{}|;:,.<>?/~`" for char in value):
+            raise serializers.ValidationError("Password must contain at least one special character (e.g., @!#$%).")
         return value
 
     def validate_full_name(self, value):
@@ -98,8 +124,33 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         role = data.get('role')
         if role == 'student' and not data.get('student'):
             raise serializers.ValidationError({"student": "Student profile data is required for student role."})
-        elif role == 'teacher' and not data.get('teacher'):
-            raise serializers.ValidationError({"teacher": "Teacher profile data is required for teacher role."})
+        elif role == 'teacher':
+            teacher_data = data.get('teacher')
+            if not teacher_data:
+                raise serializers.ValidationError({"teacher": "Teacher profile data is required for teacher role."})
+            
+            # Department Code Validation for Teachers
+            dept_code = data.get('dept_code')
+            department = teacher_data.get('department', '').upper()
+            
+            DEPARTMENT_CODES = {
+                'CT': 'CTPLACE26',
+                'CM': 'CMPLACE26',
+                'EL': 'ELPLACE26',
+                'EEE': 'EEEPLACE26',
+                'BME': 'BMEPLACE26',
+                'RPA': 'RPAPLACE26',
+            }
+            
+            if department not in DEPARTMENT_CODES:
+                raise serializers.ValidationError({"teacher": {"department": f"Invalid department: {department}"}})
+            
+            if not dept_code:
+                raise serializers.ValidationError({"dept_code": "Department authentication code is required for teacher registration."})
+            
+            if dept_code != DEPARTMENT_CODES[department]:
+                raise serializers.ValidationError({"dept_code": "Invalid department authentication code."})
+
         elif role == 'placement' and not data.get('placement'):
             raise serializers.ValidationError({"placement": "Placement profile data is required for placement officer role."})
         return data
@@ -112,6 +163,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         student_data = validated_data.pop('student', None)
         teacher_data = validated_data.pop('teacher', None)
         placement_data = validated_data.pop('placement', None)
+        validated_data.pop('dept_code', None) # Remove dept_code after validation
 
         with transaction.atomic():
             user = User.objects.create_user(password=password, **validated_data)

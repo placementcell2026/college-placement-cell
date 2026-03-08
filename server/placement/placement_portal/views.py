@@ -3,8 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.http import HttpResponse
-from accounts.models import Job, JobApplication, Student, PlacementOfficer, Teacher
-from accounts.serializers import JobSerializer, JobApplicationSerializer
+from accounts.models import Job, JobApplication, Student, PlacementOfficer, Teacher, Interview
+from accounts.serializers import JobSerializer, JobApplicationSerializer, InterviewSerializer
 import io
 
 # Try to import reportlab, if not available, we will handle it
@@ -26,14 +26,15 @@ class PlacementDashboardView(APIView):
                 {"label": "Active Drives", "value": str(Job.objects.count())},
                 {"label": "Total Applications", "value": str(JobApplication.objects.count())},
                 {"label": "Students Registered", "value": str(Student.objects.count())},
-                {"label": "Departments", "value": str(Teacher.objects.values('department').distinct().count())},
+                {"label": "Teachers Registered", "value": str(Teacher.objects.count())},
+                {"label": "Departments", "value": str(Teacher.objects.values('department').distinct().count() or Student.objects.values('department').distinct().count())},
             ]
         }
         return Response(data)
 
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all().order_by('-posted_on')
-    serializer_serializer = JobSerializer
+    serializer_class = JobSerializer
     
     def get_serializer_class(self):
         return JobSerializer
@@ -96,6 +97,17 @@ class JobViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'attachment; filename="applicants_{job.id}.pdf"'
         return response
 
+class InterviewViewSet(viewsets.ModelViewSet):
+    queryset = Interview.objects.all().order_by('-date_time')
+    serializer_class = InterviewSerializer
+
+    def get_queryset(self):
+        # Allow checking interviews by department if needed
+        dept = self.request.query_params.get('department')
+        if dept:
+            return Interview.objects.filter(department=dept).order_by('-date_time')
+        return super().get_queryset()
+
 class PlacementOfficerProfileView(APIView):
     # ... (existing profile view code)
     def get(self, request):
@@ -117,22 +129,39 @@ class PlacementOfficerProfileView(APIView):
             return Response({"error": "Placement Officer not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def patch(self, request):
-        phone = request.data.get('phone')
+        phone = request.data.get('phone', '').strip()
         try:
-            officer = PlacementOfficer.objects.get(user__phone=phone)
+            if phone:
+                pcf = PlacementOfficer.objects.get(user__phone=phone)
+            elif request.user.is_authenticated:
+                pcf = PlacementOfficer.objects.get(user=request.user)
+            else:
+                return Response({"error": "Phone number required"}, status=status.HTTP_400_BAD_REQUEST)
             fields = ['designation', 'office_role', 'experience', 'college']
             for field in fields:
                 if field in request.data:
-                    setattr(officer, field, request.data.get(field))
+                    setattr(pcf, field, request.data.get(field))
             
             if 'image' in request.FILES:
-                officer.image = request.FILES['image']
+                pcf.image = request.FILES['image']
                 
-            officer.save()
-            return Response({"message": "Profile updated successfully"})
+            pcf.save()
+            return Response({
+                "message": "Profile updated successfully",
+                "full_name": pcf.user.full_name,
+                "email": pcf.user.email,
+                "phone": pcf.user.phone,
+                "designation": pcf.designation,
+                "office_role": pcf.office_role,
+                "experience": pcf.experience,
+                "college": pcf.college,
+                "image": pcf.image.url if pcf.image else None,
+            })
         except PlacementOfficer.DoesNotExist:
             return Response({"error": "Placement Officer not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class RegisteredStudentsView(APIView):
@@ -145,7 +174,8 @@ class RegisteredStudentsView(APIView):
             "phone": s.user.phone,
             "department": s.department,
             "course": s.course,
-            "overall_cgpa": s.overall_cgpa
+            "overall_cgpa": s.overall_cgpa,
+            "is_blacklisted": s.is_blacklisted
         } for s in students]
         return Response(data)
 

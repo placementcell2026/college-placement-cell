@@ -1,0 +1,38 @@
+# 🎓 College Placement Cell Portal - Main Functionality
+
+The College Placement Cell Portal is a robust management system designed to streamline the placement process by connecting students, faculty, and placement officers through a centralized digital platform.
+
+## 1. User Roles & Access Control
+- **Multitenant Architecture**: Supports different user types with restricted permissions.
+- **Student**: Access to job listings, academic tracking, and application history.
+- **Teacher**: Oversight and academic monitoring (View-only/Assisting role).
+- **Placement Officer**: Administrative control over job drives, student reviews, and platform configuration.
+- **Registration Workflow**: Secure student onboarding with an approval-based registration request system.
+
+## 2. Smart Student Dashboard
+- **Academic Tracking**: 
+    - Real-time calculation of overall CGPA from semester results.
+    - Automated backlog tracking.
+- **Profile Strength Indicator**: Visual progress tracker showing profile completion percentage.
+- **Eligibility Engine**: Dynamic filtering that shows only job roles where the student meets the minimum CGPA, department, and backlog requirements.
+- **Application Tracking**: Real-time status updates for every submitted job application (Under Review, Shortlisted, Selected, Rejected).
+
+## 3. Placement Drive Management
+- **Job Postings**: Placement officers can create detailed job listings including salary, role, location, and requirements.
+- **Eligibility Criteria**: Fine-grained control over which students can apply (Department-specific, CGPA thresholds).
+- **Applicant Review**: Tools for officers to review student profiles, download resumes, and update application statuses.
+
+## 4. Communication & Notifications
+- **Automated Alerts**: Real-time notifications for:
+    - New Job Postings.
+    - Application status changes.
+    - Profile update reminders.
+- **Secure File Storage**: Integrated handling for professional resumes and profile images.
+
+## 5. Technical Highlights
+- **Architecture**: Decoupled React (Vite) frontend and Django REST Framework (DRF) backend.
+- **Styling**: Modern, responsive UI built with Tailwind CSS, Framer Motion for animations, and Lucide React icons.
+- **Database**: Relational schema ensuring data integrity across users, academic records, and job applications.
+
+---
+*Created to provide a clear overview of the system's core capabilities.*

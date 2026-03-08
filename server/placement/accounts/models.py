@@ -57,6 +57,8 @@ class Student(models.Model):
     # Additional Info
     skills = models.TextField(blank=True)
     resume = models.FileField(upload_to='resumes/', null=True, blank=True)
+    is_blacklisted = models.BooleanField(default=False)
+    ats_score = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
 
     def calculate_cgpa(self):
         results = self.results.all()
@@ -270,3 +272,24 @@ class RegistrationRequest(models.Model):
 
     def __str__(self):
         return f"Request: {self.full_name} ({self.department})"
+
+# ============================
+# COMPANY INTERVIEW
+# ============================
+class Interview(models.Model):
+    company = models.CharField(max_length=200)
+    role = models.CharField(max_length=150, blank=True, null=True)
+    department = models.CharField(max_length=100)
+    date_time = models.DateTimeField()
+    meeting_link = models.URLField(max_length=500)
+    attachment = models.FileField(upload_to='interviews/', null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="created_interviews")
+    
+    # Selection
+    selected_students = models.ManyToManyField(Student, related_name="interviews", blank=True)
+
+    def __str__(self):
+        return f"Interview: {self.company} for {self.department}"

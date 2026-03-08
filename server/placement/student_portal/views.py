@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
 from accounts.models import Student, Job, JobApplication, Notification
 from accounts.serializers import JobSerializer, JobApplicationSerializer, NotificationSerializer
 
@@ -23,19 +24,36 @@ class StudentDashboardView(APIView):
         if not student:
              return Response({"error": "No student profile exists"}, status=status.HTTP_404_NOT_FOUND)
 
-        # 1. Eligibility Filtering for Jobs
-        eligible_jobs = Job.objects.filter(
-            min_cgpa__lte=student.overall_cgpa,
-            max_backlogs__gte=student.total_backlogs,
-            allowed_departments__icontains=student.department
-        ).order_by('-posted_on')[:5]
+        # 1. Eligibility Filtering for Jobs (By Branch/Department)
+        if student.is_blacklisted:
+            eligible_jobs = Job.objects.none()
+        else:
+            branch = student.department if student.department else ""
+            eligible_jobs = Job.objects.filter(
+                allowed_departments__icontains=branch
+            ).order_by('-posted_on')[:10]
+            
+            # If no branch specific jobs, show latest jobs
+            if not eligible_jobs.exists():
+                eligible_jobs = Job.objects.all().order_by('-posted_on')[:10]
 
         # 2. Stats Calculation
         stats = [
             {"label": "Jobs Applied", "value": str(student.applications.count()), "trend": "Total Applications"},
             {"label": "Overall CGPA", "value": f"{student.overall_cgpa:.2f}", "trend": f"Sem {student.semester}"},
-            {"label": "Backlogs", "value": str(student.total_backlogs), "trend": "Active Backlogs"},
+            {"label": "ATS Score", "value": f"{student.ats_score}%", "trend": "Resume Match"},
             {"label": "Profile Strength", "value": f"{student.profile_completion}%", "trend": "Update Skills"},
+        ]
+
+        # 4. Collection of all drive dates for the calendar
+        all_drives = Job.objects.filter(deadline__gte=timezone.now()).order_by('deadline')
+        drive_dates = [
+            {
+                "id": drive.id,
+                "date": drive.deadline.strftime('%Y-%m-%d'),
+                "company": drive.company,
+                "role": drive.role
+            } for drive in all_drives
         ]
 
         # 3. Formatted Dashboard Data
@@ -49,11 +67,10 @@ class StudentDashboardView(APIView):
             "stats": stats,
             "recommended_jobs": JobSerializer(eligible_jobs, many=True).data,
             "upcoming_drives": [
-                 # This would ideally come from a special 'Event' or 'Drive' model
-                 # For now, return a placeholder or list from Job model with deadlines
                 {"id": j.id, "company": j.company, "role": j.role, "month": j.deadline.strftime('%b').upper(), "day": j.deadline.strftime('%d'), "time": j.deadline.strftime('%H:%M %p')}
                 for j in eligible_jobs[:3]
-            ]
+            ],
+            "all_drive_dates": drive_dates
         }
         return Response(data)
 
@@ -69,6 +86,9 @@ class JobApplicationView(APIView):
             job = Job.objects.get(id=job_id)
             
             # Check eligibility again for safety
+            if student.is_blacklisted:
+                return Response({"error": "You have been blacklisted and cannot apply for jobs."}, status=status.HTTP_403_FORBIDDEN)
+                
             if student.overall_cgpa < job.min_cgpa or student.total_backlogs > job.max_backlogs:
                 return Response({"error": "You are not eligible for this job"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -123,15 +143,35 @@ class StudentProfileView(APIView):
                 "profile_completion": student.profile_completion,
                 "image": student.image.url if student.image else None,
                 "resume": student.resume.url if student.resume else None,
+                "ats_score": student.ats_score,
             }
+
+            # Fetch jobs allowed for student's branch (relaxed filter for profile view)
+            branch = student.department if student.department else ""
+            eligible_jobs = Job.objects.filter(
+                allowed_departments__icontains=branch
+            ).order_by('-posted_on')[:10]
+            
+            # If no branch matches, just show latest jobs so section is never empty
+            if not eligible_jobs.exists():
+                eligible_jobs = Job.objects.all().order_by('-posted_on')[:10]
+            
+            job_serializer = JobSerializer(eligible_jobs, many=True)
+            data["eligible_jobs"] = job_serializer.data
+
             return Response(data)
         except Student.DoesNotExist:
             return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def patch(self, request):
-        phone = request.data.get('phone')
+        phone = request.data.get('phone', '').strip()
         try:
-            student = Student.objects.get(user__phone=phone)
+            if phone:
+                student = Student.objects.get(user__phone=phone)
+            elif request.user.is_authenticated:
+                student = Student.objects.get(user=request.user)
+            else:
+                return Response({"error": "Phone number required"}, status=status.HTTP_400_BAD_REQUEST)
             
             # Simple manual mapping for profile update
             # In a more complex app, we'd use a dedicated UpdateSerializer
@@ -153,11 +193,53 @@ class StudentProfileView(APIView):
             if 'image' in request.FILES:
                 student.image = request.FILES['image']
             if 'resume' in request.FILES:
-                student.resume = request.FILES['resume']
+                resume_file = request.FILES['resume']
+                student.resume = resume_file
+                # Auto-calculate ATS score on upload
+                try:
+                    from accounts.ats_utils import extract_resume_text, calculate_ats_score
+                    # Use the file object from request.FILES which is seekable/readable
+                    resume_text = extract_resume_text(resume_file)
+                    if resume_text:
+                        print(f"ATS Debug: Extracted {len(resume_text)} chars from {resume_file.name}")
+                        print(f"ATS Debug: Text preview: {resume_text[:100]}...")
+                        # Map department to branch code for ATS
+                        branch = student.department if student.department else "CT"
+                        student.ats_score = calculate_ats_score(resume_text, branch=branch)
+                        print(f"ATS Success ({branch}): {student.ats_score}% for {student.user.full_name}")
+                    else:
+                        print(f"ATS Error: Extraction returned EMPTY text for {resume_file.name}")
+                        student.ats_score = 0
+                except Exception as e:
+                    import traceback
+                    print(f"ATS Exception: {e}")
+                    traceback.print_exc()
+                    student.ats_score = 0
                 
             student.save()
-            return Response({"message": "Profile updated successfully"})
+            return Response({
+                "message": "Profile updated successfully",
+                "full_name": student.user.full_name,
+                "email": student.user.email,
+                "phone": student.user.phone,
+                "dob": student.dob,
+                "gender": student.gender,
+                "college": student.college,
+                "department": student.department,
+                "course": student.course,
+                "semester": student.semester,
+                "roll_no": student.roll_no,
+                "skills": student.skills,
+                "overall_cgpa": student.overall_cgpa,
+                "total_backlogs": student.total_backlogs,
+                "profile_completion": student.profile_completion,
+                "ats_score": student.ats_score,
+                "resume": student.resume.url if student.resume else None,
+                "image": student.image.url if student.image else None
+            })
         except Student.DoesNotExist:
             return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

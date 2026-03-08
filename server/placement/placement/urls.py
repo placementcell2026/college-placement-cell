@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/student/', include('student_portal.urls')),
     path('api/teacher/', include('teacher_portal.urls')),
     path('api/placement/', include('placement_portal.urls')),
+    path('captcha/', include('captcha.urls')),
 ]
 
 if settings.DEBUG:

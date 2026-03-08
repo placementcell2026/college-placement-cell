@@ -4,9 +4,30 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import User, Teacher, Notification, Student, RegistrationRequest
+from .models import User, Teacher, Notification, Student, RegistrationRequest, PlacementOfficer
 from .serializers import UserRegistrationSerializer
+from .ats_utils import (
+    extract_resume_text,
+    calculate_ats_score,
+    extract_skills,
+    find_missing_skills,
+    check_resume_sections
+)
 from django.contrib.auth.hashers import make_password
+
+from django.contrib.auth.hashers import make_password
+from captcha.models import CaptchaStore
+from captcha.helpers import captcha_image_url
+
+class CaptchaView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request):
+        key = CaptchaStore.generate_key()
+        image_url = captcha_image_url(key)
+        # Ensure image_url is absolute for the frontend
+        if not image_url.startswith('http'):
+            image_url = f"http://127.0.0.1:8000{image_url}"
+        return Response({"captcha_key": key, "captcha_image": image_url})
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -22,6 +43,21 @@ class RegisterView(APIView):
 
         if not role:
             return Response({"error": "Role is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Captcha Verification
+        captcha_key = data.get('captcha_key')
+        captcha_value = data.get('captcha_value')
+        
+        if not captcha_key or not captcha_value:
+             return Response({"error": "Captcha verification failed: Missing key or value"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            captcha = CaptchaStore.objects.get(hashkey=captcha_key)
+            if captcha.response.lower() != captcha_value.lower():
+                return Response({"error": "Captcha verification failed: Wrong answer!"}, status=status.HTTP_400_BAD_REQUEST)
+            captcha.delete() # Consumed
+        except CaptchaStore.DoesNotExist:
+            return Response({"error": "Captcha verification failed: Expired or invalid session"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Ensure main user fields are snake_case (handle both frontend styles)
         field_mapping = {
@@ -56,6 +92,19 @@ class RegisterView(APIView):
         try:
             # Handle student registration requests
             if role == 'student':
+                # Check if user already exists
+                phone = data.get('phone')
+                email = data.get('email')
+                
+                if User.objects.filter(phone=phone).exists():
+                    return Response({"error": "A user with this phone number is already registered."}, status=status.HTTP_400_BAD_REQUEST)
+                if User.objects.filter(email=email).exists():
+                    return Response({"error": "A user with this email is already registered."}, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Check for existing pending request
+                if RegistrationRequest.objects.filter(phone=phone, status='Pending').exists():
+                    return Response({"error": "You already have a pending registration request. Please wait for approval."}, status=status.HTTP_400_BAD_REQUEST)
+
                 student_data = data.get('student', {})
                 req = RegistrationRequest.objects.create(
                     full_name=data.get('full_name'),
@@ -115,6 +164,7 @@ class RegisterView(APIView):
                 return Response({
                     "message": "User registered successfully",
                     "user_id": user.phone,
+                    "id": user.id,
                     "role": user.role,
                     "full_name": user.full_name
                 }, status=status.HTTP_201_CREATED)
@@ -180,12 +230,47 @@ class LoginView(APIView):
             if role and user.role != role:
                  return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
             
-            return Response({
+            response_data = {
                 "message": "Login successful",
+                "phone": user.phone,
                 "user_id": user.phone,
+                "id": user.id,
                 "role": user.role,
                 "full_name": user.full_name
-            }, status=status.HTTP_200_OK)
+            }
+
+            # Add more details based on role
+            if user.role == 'teacher':
+                try:
+                    teacher = Teacher.objects.get(user=user)
+                    response_data['department'] = teacher.department
+                    if teacher.image:
+                        response_data['image'] = teacher.image.url
+                except Teacher.DoesNotExist:
+                    pass
+            elif user.role == 'student':
+                try:
+                    student = Student.objects.get(user=user)
+                    response_data['department'] = student.department
+                    response_data['ats_score'] = student.ats_score
+                    if student.image:
+                        response_data['image'] = student.image.url
+                except Student.DoesNotExist:
+                    pass
+            elif user.role == 'placement':
+                try:
+                    pcf = PlacementOfficer.objects.get(user=user)
+                    response_data['college'] = pcf.college
+                    if pcf.image:
+                        response_data['image'] = pcf.image.url
+                except PlacementOfficer.DoesNotExist:
+                    pass
+
+            # Ensure image URL is absolute if it exists
+            if 'image' in response_data and response_data['image'] and not response_data['image'].startswith('http'):
+                response_data['image'] = f"http://127.0.0.1:8000{response_data['image']}"
+
+            return Response(response_data, status=status.HTTP_200_OK)
         
         # Check if user exists but is inactive
         try:
@@ -196,3 +281,33 @@ class LoginView(APIView):
             pass
             
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+class StudentActionView(APIView):
+    def post(self, request):
+        student_id = request.data.get('student_id')
+        action = request.data.get('action') # 'blacklist' or 'remove'
+        
+        if not student_id or not action:
+            return Response({"error": "Student ID and action required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            student = Student.objects.get(id=student_id)
+            user = student.user
+            
+            if action == 'blacklist':
+                student.is_blacklisted = not student.is_blacklisted # Toggle blacklist
+                student.save()
+                msg = f"Student {user.full_name} {'blacklisted' if student.is_blacklisted else 'removed from blacklist'} successfully"
+                return Response({"message": msg, "is_blacklisted": student.is_blacklisted})
+                
+            elif action == 'remove':
+                user_name = user.full_name
+                user.delete() # Deleting user will cascade delete student profile
+                return Response({"message": f"Student {user_name} removed successfully"})
+            
+            return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Student.DoesNotExist:
+            return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
+
+

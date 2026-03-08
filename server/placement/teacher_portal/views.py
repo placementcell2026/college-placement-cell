@@ -1,7 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
-from accounts.models import Student, User, Teacher, RegistrationRequest, Notification
+from rest_framework import status, permissions
+from accounts.models import Student, User, Teacher, RegistrationRequest, Notification, PlacementOfficer, Interview
+from accounts.serializers import InterviewSerializer, StudentSimpleSerializer
 from django.db.models import Count
 
 class TeacherDashboardView(APIView):
@@ -52,7 +53,11 @@ class PendingRegistrationsView(APIView):
                 "roll_no": r.roll_no,
                 "department": r.department,
                 "semester": r.semester,
+                "course": r.course,
                 "college": r.college,
+                "dob": r.dob,
+                "gender": r.gender,
+                "image": r.image.url if r.image else None,
                 "created_at": r.created_at
             } for r in pending_requests]
             
@@ -70,10 +75,21 @@ class ApproveRegistrationView(APIView):
             reg_request = RegistrationRequest.objects.get(id=request_id, status='Pending')
             
             # Check if user already exists
-            if User.objects.filter(phone=reg_request.phone).exists():
-                return Response({"error": "User with this phone number already exists"}, status=status.HTTP_400_BAD_REQUEST)
-            if User.objects.filter(email=reg_request.email).exists():
-                return Response({"error": "User with this email already exists"}, status=status.HTTP_400_BAD_REQUEST)
+            user_exists = User.objects.filter(phone=reg_request.phone).first() or \
+                          User.objects.filter(email=reg_request.email).first()
+            
+            if user_exists:
+                # If they already exist, we should probably just mark this request as processed
+                reg_request.status = 'Approved'
+                reg_request.save()
+                
+                # Clean up notifications
+                Notification.objects.filter(extra_data__request_id=request_id, extra_data__type="registration_request").delete()
+                
+                return Response({
+                    "message": f"Student {reg_request.full_name} is already registered. This request has been marked as processed.",
+                    "already_exists": True
+                })
 
             # Create User
             user = User.objects.create(
@@ -159,9 +175,14 @@ class TeacherProfileView(APIView):
             return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
 
     def patch(self, request):
-        phone = request.data.get('phone')
+        phone = request.data.get('phone', '').strip()
         try:
-            teacher = Teacher.objects.get(user__phone=phone)
+            if phone:
+                teacher = Teacher.objects.get(user__phone=phone)
+            elif request.user.is_authenticated:
+                teacher = Teacher.objects.get(user=request.user)
+            else:
+                return Response({"error": "Phone number required"}, status=status.HTTP_400_BAD_REQUEST)
             fields = ['designation', 'qualification', 'department', 'experience', 'position']
             for field in fields:
                 if field in request.data:
@@ -171,8 +192,92 @@ class TeacherProfileView(APIView):
                 teacher.image = request.FILES['image']
                 
             teacher.save()
-            return Response({"message": "Profile updated successfully"})
+            return Response({
+                "message": "Profile updated successfully",
+                "full_name": teacher.user.full_name,
+                "email": teacher.user.email,
+                "phone": teacher.user.phone,
+                "designation": teacher.designation,
+                "qualification": teacher.qualification,
+                "department": teacher.department,
+                "experience": teacher.experience,
+                "position": teacher.position,
+                "image": teacher.image.url if teacher.image else None,
+            })
         except Teacher.DoesNotExist:
             return Response({"error": "Teacher not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+class TeacherStudentListView(APIView):
+    def get(self, request):
+        phone = request.query_params.get('phone')
+        if not phone:
+            return Response({"error": "Teacher phone required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            teacher = Teacher.objects.get(user__phone=phone)
+            students = Student.objects.filter(department__iexact=teacher.department, user__is_active=True).order_by('roll_no')
+            
+            data = [{
+                "id": s.id,
+                "full_name": s.user.full_name,
+                "email": s.user.email,
+                "phone": s.user.phone,
+                "roll_no": s.roll_no,
+                "department": s.department,
+                "course": s.course,
+                "semester": s.semester,
+                "college": s.college,
+                "gender": s.gender,
+                "dob": s.dob,
+                "cgpa": float(s.overall_cgpa),
+                "backlogs": s.total_backlogs,
+                "image": s.image.url if s.image else None,
+                "is_blacklisted": s.is_blacklisted,
+            } for s in students]
+            
+            return Response(data)
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class TeacherInterviewView(APIView):
+    def get(self, request):
+        phone = request.query_params.get('phone')
+        try:
+            teacher = Teacher.objects.get(user__phone=phone)
+            # Find interviews that match the teacher's department exactly or partially
+            interviews = Interview.objects.filter(department__icontains=teacher.department).order_by('-date_time')
+            serializer = InterviewSerializer(interviews, many=True)
+            return Response(serializer.data)
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class SelectStudentsForInterviewView(APIView):
+    def post(self, request):
+        interview_id = request.data.get('interview_id')
+        student_ids = request.data.get('student_ids', []) # List of student IDs
+        
+        try:
+            interview = Interview.objects.get(id=interview_id)
+            students = Student.objects.filter(id__in=student_ids)
+            
+            # Update selected students
+            interview.selected_students.set(students)
+            interview.save()
+            
+            # Notify students
+            for student in students:
+                Notification.objects.get_or_create(
+                    user=student.user,
+                    title="Interview Invitation",
+                    message=f"You have been selected for the {interview.company} interview on {interview.date_time.strftime('%H:%M %p, %d %b %Y')}.",
+                    extra_data={"interview_id": interview.id, "type": "interview_invitation", "link": interview.meeting_link}
+                )
+            
+            return Response({"message": f"Successfully selected {len(students)} students and notified them."})
+        except Interview.DoesNotExist:
+            return Response({"error": "Interview not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

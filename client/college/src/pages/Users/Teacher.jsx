@@ -1,13 +1,14 @@
 import React from 'react';
 import { motion } from "framer-motion";
-import { Users, FileText, CheckCircle, Clock } from "lucide-react";
-import { useOutletContext } from 'react-router-dom';
+import { Users, FileText, CheckCircle, Clock, BookOpen } from "lucide-react";
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from "react-toastify";
 import "../Home.css";
 
 const Teacher = () => {
     const { user } = useOutletContext();
+    const navigate = useNavigate();
     const [stats, setStats] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
 
@@ -44,12 +45,38 @@ const Teacher = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
-                        className="hero-header"
+                        className="hero-header relative"
                     >
-                        <h1 className="hero-title">
-                            Welcome back, <span className="highlight-text">{user?.full_name || 'Teacher'}</span>
-                        </h1>
-                        <p className="hero-subtitle">Manage your students and their progress.</p>
+                        <div className="flex justify-between items-start w-full">
+                            <div className="z-10 relative">
+                                <h1 className="hero-title">
+                                    Welcome back, <span className="highlight-text">{user?.full_name || 'Teacher'}</span>
+                                </h1>
+                                <p className="hero-subtitle">Manage your students and their progress.</p>
+                                
+                                {user?.department && (
+                                    <div className="hero-department">
+                                        <BookOpen size={16} />
+                                        <span>{user.department} Department</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Profile Photo Badge - Outside Flex */}
+                        <div className="profile-badge-corner overflow-hidden" style={{ top: '0', right: '0' }}>
+                            {user?.image ? (
+                                <img 
+                                    src={user.image} 
+                                    alt="Profile" 
+                                    className="profile-badge-image shadow-xl"
+                                />
+                            ) : (
+                                <div className="profile-badge-placeholder">
+                                    <User size={40} />
+                                </div>
+                            )}
+                        </div>
                     </motion.div>
 
                     <div className="stats-grid">
@@ -59,12 +86,14 @@ const Teacher = () => {
                                 <CheckCircle className="text-green-400" size={24} />,
                                 <Clock className="text-orange-400" size={24} />
                             ];
+                            const isClickable = stat.label === "Total Students";
                             return (
                                 <SimpleStatsCard 
                                     key={index}
                                     icon={icons[index % icons.length]}
                                     label={stat.label}
                                     value={stat.value}
+                                    onClick={isClickable ? () => navigate("/home/teacher/students") : undefined}
                                 />
                             );
                         })}
@@ -77,7 +106,20 @@ const Teacher = () => {
                         </div>
                         <div style={{ display: 'flex', gap: '1rem' }}>
                              <button className="apply-btn" style={{ width: 'auto', padding: '0.75rem 1.5rem' }}>View Applications</button>
-                             <button className="apply-btn" style={{ width: 'auto', padding: '0.75rem 1.5rem', background: '#333' }}>Manage Students</button>
+                             <button 
+                                onClick={() => navigate("/home/teacher/interviews")}
+                                className="apply-btn" 
+                                style={{ width: 'auto', padding: '0.75rem 1.5rem', background: '#4f46e5' }}
+                            >
+                                Manage Interviews
+                            </button>
+                             <button 
+                                onClick={() => navigate("/home/teacher/students")}
+                                className="apply-btn" 
+                                style={{ width: 'auto', padding: '0.75rem 1.5rem', background: '#333' }}
+                            >
+                                Manage Students
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -86,10 +128,12 @@ const Teacher = () => {
     );
 };
 
-const SimpleStatsCard = ({ icon, label, value }) => (
+const SimpleStatsCard = ({ icon, label, value, onClick }) => (
     <motion.div 
-      whileHover={{ y: -5 }}
+      whileHover={onClick ? { y: -5, scale: 1.02, cursor: 'pointer' } : { y: -5 }}
+      whileTap={onClick ? { scale: 0.98 } : {}}
       className="stats-card"
+      onClick={onClick}
     >
       <div className="stats-header">
         <div className="stats-icon-wrapper">

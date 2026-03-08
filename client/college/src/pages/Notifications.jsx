@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Bell, CheckCircle, AlertTriangle, Info, Trash2, Clock,Users } from "lucide-react";
+import { Bell, CheckCircle, AlertTriangle, Info, Trash2, Clock,Users, User, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import "./Notifications.css";
 import "./Home.css";
-
 
 const Notifications = () => {
   const [notifications, setNotifications] = React.useState([]);
@@ -64,11 +63,16 @@ const Notifications = () => {
     
     setActionLoading(notif.id);
     try {
-      await axios.post("http://127.0.0.1:8000/api/teacher/registrations/approve/", {
+      const response = await axios.post("http://127.0.0.1:8000/api/teacher/registrations/approve/", {
         student_id: notif.extra_data.request_id
       });
       // Remove notification from list immediately upon success
       setNotifications(prev => prev.filter(n => n.id !== notif.id));
+      if (response.data.already_exists) {
+        toast.info(response.data.message);
+      } else {
+        toast.success(response.data.message || "Student approved successfully!");
+      }
     } catch (error) {
       console.error("Error approving student:", error);
       toast.error("Failed to approve student. Please try again.");
@@ -80,11 +84,11 @@ const Notifications = () => {
   const handleApproveStudent = async (studentId) => {
     setActionLoading(`student-${studentId}`);
     try {
-      await axios.post("http://127.0.0.1:8000/api/teacher/registrations/approve/", {
+      const response = await axios.post("http://127.0.0.1:8000/api/teacher/registrations/approve/", {
         student_id: studentId
       });
       setPendingStudents(prev => prev.filter(s => s.id !== studentId));
-      toast.success("Student approved successfully!");
+      toast.success(response.data.message || "Student approved successfully!");
     } catch (error) {
       console.error("Error approving student:", error);
       toast.error("Failed to approve student.");
@@ -105,9 +109,28 @@ const Notifications = () => {
       });
       // Remove notification from list
       setNotifications(prev => prev.filter(n => n.id !== notif.id));
+      toast.success("Registration request rejected.");
     } catch (error) {
       console.error("Error rejecting student:", error);
-      toast.error("Failed to reject student. Please try again.");
+      toast.error("Failed to reject student.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRejectStudent = async (studentId) => {
+    if (!window.confirm("Are you sure you want to reject this registration request?")) return;
+
+    setActionLoading(`student-${studentId}`);
+    try {
+      await axios.post("http://127.0.0.1:8000/api/teacher/registrations/reject/", {
+        student_id: studentId
+      });
+      setPendingStudents(prev => prev.filter(s => s.id !== studentId));
+      toast.success("Registration request rejected.");
+    } catch (error) {
+      console.error("Error rejecting student:", error);
+      toast.error("Failed to reject student.");
     } finally {
       setActionLoading(null);
     }
@@ -155,8 +178,18 @@ const Notifications = () => {
 
   const getDisplayableDetails = (extraData) => {
     // Exclude fields we don't want to show in the detailed list
-    const exclude = ['type', 'request_id', 'password'];
-    return Object.entries(extraData).filter(([key]) => !exclude.includes(key));
+    const exclude = ['type', 'request_id', 'password', 'image'];
+    return Object.entries(extraData)
+        .filter(([key]) => !exclude.includes(key))
+        .map(([key, value]) => {
+            // Capitalize first letter of value if it's a string like 'male' or 'ct'
+            let displayValue = value;
+            if (typeof value === 'string' && value.length < 20) {
+                displayValue = value.charAt(0).toUpperCase() + value.slice(1);
+                if (key === 'department') displayValue = value.toUpperCase();
+            }
+            return [key.replace(/_/g, ' '), displayValue || 'N/A'];
+        });
   };
 
   return (
@@ -194,25 +227,120 @@ const Notifications = () => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="registration-card"
+                  style={{ flexDirection: 'column', alignItems: 'stretch' }}
                 >
-                  <div className="student-info">
-                    <div className="info-main">
-                      <h3>{student.full_name}</h3>
-                      <span className="roll-badge">{student.roll_no}</span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="student-info">
+                      <div className="info-main">
+                        <h3>{student.full_name}</h3>
+                        <span className="roll-badge">{student.roll_no}</span>
+                      </div>
+                      <div className="info-details">
+                        <span>{student.email}</span>
+                        <span className="dot">•</span>
+                        <span>{student.semester} Sem • {student.course}</span>
+                      </div>
                     </div>
-                    <div className="info-details">
-                      <span>{student.email}</span>
-                      <span className="dot">•</span>
-                      <span>Requested on {new Date(student.created_at).toLocaleDateString()}</span>
+                    
+                    <div className="flex gap-2">
+                       <button 
+                        className="notif-action-btn view-details"
+                        onClick={() => toggleExpand(`student-${student.id}`)}
+                        style={{ height: 'fit-content' }}
+                      >
+                        {expandedNotifs.has(`student-${student.id}`) ? "Hide Details" : "View Details"}
+                      </button>
+                      <button 
+                        className={`notif-action-btn reject ${actionLoading === `student-${student.id}` ? 'loading' : ''}`}
+                        onClick={() => handleRejectStudent(student.id)}
+                        disabled={actionLoading !== null}
+                      >
+                         {actionLoading === `student-${student.id}` ? "Rejecting..." : "Reject"}
+                      </button>
+                      <button 
+                        className={`notif-action-btn approve ${actionLoading === `student-${student.id}` ? 'loading' : ''}`}
+                        onClick={() => handleApproveStudent(student.id)}
+                        disabled={actionLoading !== null}
+                      >
+                        {actionLoading === `student-${student.id}` ? "Approving..." : "Approve Student"}
+                      </button>
                     </div>
                   </div>
-                  <button 
-                    className={`approve-inline-btn ${actionLoading === `student-${student.id}` ? 'loading' : ''}`}
-                    onClick={() => handleApproveStudent(student.id)}
-                    disabled={actionLoading !== null}
-                  >
-                    {actionLoading === `student-${student.id}` ? "Approving..." : "Approve Student"}
-                  </button>
+
+                  {expandedNotifs.has(`student-${student.id}`) && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      className="student-detail-box expanded mb-2"
+                      style={{ marginTop: 0 }}
+                    >
+                       <div className="flex gap-4 p-2 items-start">
+                          {student.image ? (
+                            <img 
+                              src={`http://127.0.0.1:8000${student.image}`} 
+                              alt="student" 
+                              className="w-24 h-24 rounded-lg object-cover border border-white/10 shadow-lg"
+                            />
+                          ) : (
+                               <div className="w-24 h-24 rounded-lg bg-slate-800 flex items-center justify-center border border-white/5">
+                                    <User size={32} className="text-slate-600" />
+                               </div>
+                          )}
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-y-4 gap-x-6 flex-1">
+                            <div className="detail-item">
+                              <span className="label">Full Name:</span>
+                              <span className="value text-blue-400">{student.full_name}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="label">Email:</span>
+                              <span className="value">{student.email}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="label">Phone:</span>
+                              <span className="value">{student.phone}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="label">Roll Number:</span>
+                              <span className="value">{student.roll_no}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="label">Course:</span>
+                              <span className="value capitalize">{student.course}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="label">Semester:</span>
+                              <span className="value">{student.semester}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="label">DOB:</span>
+                              <span className="value">{student.dob || 'N/A'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="label">Gender:</span>
+                              <span className="value capitalize">{student.gender || 'N/A'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="label">College:</span>
+                              <span className="value text-slate-300">{student.college}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="label">Department:</span>
+                              <span className="value uppercase font-bold text-orange-400">{student.department}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="label">Requested On:</span>
+                              <span className="value">{new Date(student.created_at).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}</span>
+                            </div>
+                          </div>
+                       </div>
+                    </motion.div>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -296,6 +424,20 @@ const Notifications = () => {
                           ))}
                         </motion.div>
                       )}
+                    </div>
+                  )}
+
+                  {notif.type === 'interview_invitation' && notif.extra_data?.link && (
+                    <div className="notif-extra-content mt-4">
+                      <a 
+                        href={notif.extra_data.link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="notif-action-btn approve flex items-center justify-center gap-2"
+                        style={{ width: 'fit-content', textDecoration: 'none' }}
+                      >
+                        <ExternalLink size={16} /> Join Interview Meeting
+                      </a>
                     </div>
                   )}
                 </div>

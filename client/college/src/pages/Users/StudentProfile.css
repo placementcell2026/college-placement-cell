@@ -260,3 +260,47 @@
   opacity: 0.5;
   transform: none;
 }
+
+/* Floating Profile Badge */
+.profile-badge-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 10;
+}
+
+.profile-badge-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 1.25rem;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+  background: #1e293b;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.profile-badge-image:hover {
+  transform: scale(1.05) rotate(2deg);
+  border-color: #3b82f6;
+  box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.2);
+}
+
+.profile-badge-placeholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 1.25rem;
+  background: #1e293b;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+}
+
+.relative { position: relative; }

@@ -50,7 +50,10 @@ const PlacementOfficer = () => {
         deadline: '',
         qualification: '',
         responsibilities: '',
-        requirements: ''
+        requirements: '',
+        meeting_link: '',
+        department: '',
+        attachment: null
     });
 
     const fetchData = async () => {
@@ -73,6 +76,10 @@ const PlacementOfficer = () => {
         fetchData();
     }, []);
 
+    const handleFileChange = (e) => {
+        setFormData(prev => ({ ...prev, attachment: e.target.files[0] }));
+    };
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -83,16 +90,32 @@ const PlacementOfficer = () => {
         try {
             await axios.post("http://127.0.0.1:8000/api/placement/jobs/", formData);
             toast.success("Job Drive scheduled successfully!");
+            
             setShowCreateForm(false);
             setFormData({
                 company: '', role: '', location: '', job_type: 'Full Time',
                 salary: '', description: '', skills_required: '',
                 min_cgpa: 0, max_backlogs: 0, allowed_departments: '', deadline: '',
-                qualification: '', responsibilities: '', requirements: ''
+                qualification: '', responsibilities: '', requirements: '',
+                meeting_link: '', department: '', attachment: null
             });
             fetchData();
         } catch (error) {
-            toast.error("Failed to create job drive");
+            console.error("Error creating record:", error.response?.data);
+            const serverErrors = error.response?.data;
+            let errorMsg = "Failed to create job drive";
+            
+            if (serverErrors) {
+                if (typeof serverErrors === 'object') {
+                    errorMsg = Object.entries(serverErrors)
+                        .map(([field, msgs]) => `${field}: ${Array.isArray(msgs) ? msgs.join(', ') : msgs}`)
+                        .join(' | ');
+                } else {
+                    errorMsg = serverErrors;
+                }
+            }
+            
+            toast.error(errorMsg);
         }
     };
 
@@ -145,6 +168,8 @@ const PlacementOfficer = () => {
             let endpoint;
             if (label === "Students Registered") {
                 endpoint = "students/";
+            } else if (label === "Teachers Registered") {
+                endpoint = "teachers/";
             } else {
                 endpoint = "applications/";
             }
@@ -163,6 +188,8 @@ const PlacementOfficer = () => {
             let endpoint;
             if (statsModalType === "Students Registered") {
                 endpoint = "students/export/";
+            } else if (statsModalType === "Teachers Registered") {
+                endpoint = "teachers/export/";
             } else {
                 endpoint = "applications/export/";
             }
@@ -193,6 +220,27 @@ const PlacementOfficer = () => {
         }
     };
 
+    const handleStudentAction = async (studentId, action) => {
+        const confirmMsg = action === 'remove' 
+            ? "Are you sure you want to permanently remove this student? This action cannot be undone."
+            : `Are you sure you want to ${action} this student?`;
+
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            const response = await axios.post("http://127.0.0.1:8000/api/accounts/student-action/", {
+                student_id: studentId,
+                action: action
+            });
+            toast.success(response.data.message);
+            // Refresh modal data
+            handleStatClick(statsModalType);
+        } catch (error) {
+            console.error(`Error performing ${action} on student:`, error);
+            toast.error(error.response?.data?.error || `Failed to ${action} student`);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="home-page flex items-center justify-center min-h-[60vh]">
@@ -208,26 +256,53 @@ const PlacementOfficer = () => {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="hero-header"
+                        className="hero-header relative"
                     >
-                        <h1 className="hero-title">
-                            Placement <span className="highlight-text">Officer</span> Portal
-                        </h1>
-                        <p className="hero-subtitle">Manage company drives and student applications.</p>
+                        <div className="flex justify-between items-start w-full">
+                            <div className="z-10 relative">
+                                <h1 className="hero-title">
+                                    Placement <span className="highlight-text">Officer</span> Portal
+                                </h1>
+                                <p className="hero-subtitle">Manage company drives and student applications.</p>
+
+                                {user?.college && (
+                                    <div className="hero-department">
+                                        <Building size={16} />
+                                        <span>{user.college}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Profile Photo Badge - Outside Flex */}
+                        <div className="profile-badge-corner overflow-hidden" style={{ top: '0', right: '0' }}>
+                            {user?.image ? (
+                                <img 
+                                    src={user.image} 
+                                    alt="Profile" 
+                                    className="profile-badge-image shadow-xl border-white/20"
+                                />
+                            ) : (
+                                <div className="profile-badge-placeholder">
+                                    <User size={40} />
+                                </div>
+                            )}
+                        </div>
                     </motion.div>
 
                     <div className="stats-grid">
                         {stats.map((stat, index) => {
-                            const icons = [
-                                <Building className="text-blue-400" size={24} />,
-                                <Briefcase className="text-orange-400" size={24} />,
-                                <Users className="text-green-400" size={24} />,
-                                <MapPin className="text-purple-400" size={24} />
-                            ];
+                            const icons = {
+                                "Active Drives": <Briefcase className="text-orange-400" size={24} />,
+                                "Total Applications": <FileText className="text-blue-400" size={24} />,
+                                "Students Registered": <Users className="text-green-400" size={24} />,
+                                "Teachers Registered": <Users className="text-purple-400" size={24} />,
+                                "Departments": <Building className="text-indigo-400" size={24} />
+                            };
                             return (
                                 <SimpleStatsCard 
                                     key={index}
-                                    icon={icons[index % icons.length]}
+                                    icon={icons[stat.label] || <Users size={24} />}
                                     label={stat.label}
                                     value={stat.value}
                                     onClick={() => handleStatClick(stat.label)}
@@ -238,13 +313,17 @@ const PlacementOfficer = () => {
 
                     <div className="mt-12 flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-bold text-white">Active Job Drives</h2>
-                        <button 
-                            onClick={() => setShowCreateForm(true)}
-                            className="apply-btn flex items-center gap-2" 
-                            style={{ width: 'auto', padding: '0.75rem 1.5rem' }}
-                        >
-                            <Plus size={20} /> Schedule New Drive
-                        </button>
+                        <div className="flex gap-4">
+                            <button 
+                                onClick={() => {
+                                    setShowCreateForm(true);
+                                }}
+                                className="apply-btn flex items-center gap-2" 
+                                style={{ width: 'auto', padding: '0.75rem 1.5rem' }}
+                            >
+                                <Plus size={20} /> Schedule New Drive
+                            </button>
+                        </div>
                     </div>
 
                     {/* Jobs List */}
@@ -253,7 +332,7 @@ const PlacementOfficer = () => {
                             <div key={job.id} className="bg-slate-900/50 border border-white/10 rounded-2xl overflow-hidden">
                                 <div className="p-6 flex justify-between items-center">
                                     <div className="flex gap-4">
-                                        <div className="company-logo flex-shrink-0">
+                                        <div className="company-logo shrink-0">
                                             {job.company[0]}
                                         </div>
                                         <div>
@@ -346,79 +425,84 @@ const PlacementOfficer = () => {
                                     className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
                                 >
                                     <div className="sticky top-0 bg-slate-900 p-6 border-b border-white/10 flex justify-between items-center z-10">
-                                        <h2 className="text-xl font-bold text-white">Schedule New Job Drive</h2>
+                                        <h2 className="text-xl font-bold text-white">
+                                            Schedule New Job Drive
+                                        </h2>
                                         <button onClick={() => setShowCreateForm(false)} className="text-slate-400 hover:text-white">
                                             <X size={24} />
                                         </button>
                                     </div>
-                                    <form onSubmit={handleCreateJob} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-4">
-                                            <div>
-                                                <label className="text-sm text-slate-400">Company Name</label>
-                                                <input required name="company" value={formData.company} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
-                                            </div>
-                                            <div>
-                                                <label className="text-sm text-slate-400">Job Role</label>
-                                                <input required name="role" value={formData.role} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
-                                            </div>
-                                            <div>
-                                                <label className="text-sm text-slate-400">Location</label>
-                                                <input required name="location" value={formData.location} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
-                                            </div>
-                                            <div>
-                                                <label className="text-sm text-slate-400">Job Type</label>
-                                                <select name="job_type" value={formData.job_type} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white">
-                                                    <option value="Full Time">Full Time</option>
-                                                    <option value="Internship">Internship</option>
-                                                    <option value="Part Time">Part Time</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="text-sm text-slate-400">Salary Package</label>
-                                                <input required name="salary" value={formData.salary} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="e.g. 12 LPA" />
-                                            </div>
-                                            <div>
-                                                <label className="text-sm text-slate-400">Qualification</label>
-                                                <input required name="qualification" value={formData.qualification} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="e.g. B.Tech, Diploma" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-4">
+                                    <form onSubmit={handleCreateJob} className="p-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-4">
                                                 <div>
-                                                    <label className="text-sm text-slate-400">Min CGPA</label>
-                                                    <input type="number" step="0.01" name="min_cgpa" value={formData.min_cgpa} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                                                    <label className="text-sm text-slate-400">Company Name</label>
+                                                    <input required name="company" value={formData.company} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
                                                 </div>
                                                 <div>
-                                                    <label className="text-sm text-slate-400">Max Backlogs</label>
-                                                    <input type="number" name="max_backlogs" value={formData.max_backlogs} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                                                    <label className="text-sm text-slate-400">Job Role</label>
+                                                    <input required name="role" value={formData.role} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm text-slate-400">Location</label>
+                                                    <input required name="location" value={formData.location} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm text-slate-400">Job Type</label>
+                                                    <select name="job_type" value={formData.job_type} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white">
+                                                        <option value="Full Time">Full Time</option>
+                                                        <option value="Internship">Internship</option>
+                                                        <option value="Part Time">Part Time</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm text-slate-400">Salary Package</label>
+                                                    <input required name="salary" value={formData.salary} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="e.g. 12 LPA" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm text-slate-400">Qualification</label>
+                                                    <input required name="qualification" value={formData.qualification} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="e.g. B.Tech, Diploma" />
                                                 </div>
                                             </div>
-                                            <div>
-                                                <label className="text-sm text-slate-400">Allowed Departments</label>
-                                                <input required name="allowed_departments" value={formData.allowed_departments} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="CSE, ECE, ME" />
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-sm text-slate-400">Min CGPA</label>
+                                                        <input type="number" step="0.01" name="min_cgpa" value={formData.min_cgpa} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-sm text-slate-400">Max Backlogs</label>
+                                                        <input type="number" name="max_backlogs" value={formData.max_backlogs} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm text-slate-400">Allowed Departments</label>
+                                                    <input required name="allowed_departments" value={formData.allowed_departments} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="CSE, ECE, ME" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm text-slate-400">Deadline</label>
+                                                    <input required type="datetime-local" name="deadline" value={formData.deadline} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm text-slate-400">Skills Required</label>
+                                                    <input required name="skills_required" value={formData.skills_required} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="React, Node.js, SQL" />
+                                                </div>
                                             </div>
-                                            <div>
-                                                <label className="text-sm text-slate-400">Deadline</label>
-                                                <input required type="datetime-local" name="deadline" value={formData.deadline} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                                            <div className="md:col-span-2">
+                                                <label className="text-sm text-slate-400">Job Description</label>
+                                                <textarea required name="description" value={formData.description} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white"></textarea>
                                             </div>
-                                            <div>
-                                                <label className="text-sm text-slate-400">Skills Required</label>
-                                                <input required name="skills_required" value={formData.skills_required} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="React, Node.js, SQL" />
+                                            <div className="md:col-span-2">
+                                                <label className="text-sm text-slate-400">Job Requirements</label>
+                                                <textarea required name="requirements" value={formData.requirements} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="List technology, experience, etc."></textarea>
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <label className="text-sm text-slate-400">Key Responsibilities</label>
+                                                <textarea required name="responsibilities" value={formData.responsibilities} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="Describe the daily tasks..."></textarea>
                                             </div>
                                         </div>
-                                        <div className="md:col-span-2">
-                                            <label className="text-sm text-slate-400">Job Description</label>
-                                            <textarea required name="description" value={formData.description} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white"></textarea>
-                                        </div>
-                                        <div className="md:col-span-2">
-                                            <label className="text-sm text-slate-400">Job Requirements</label>
-                                            <textarea required name="requirements" value={formData.requirements} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="List technology, experience, etc."></textarea>
-                                        </div>
-                                        <div className="md:col-span-2">
-                                            <label className="text-sm text-slate-400">Key Responsibilities</label>
-                                            <textarea required name="responsibilities" value={formData.responsibilities} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="Describe the daily tasks..."></textarea>
-                                        </div>
-                                        <div className="md:col-span-2 pt-4">
+                                        
+                                        <div className="pt-6">
                                             <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all">
                                                 Create Job Drive
                                             </button>
@@ -437,6 +521,7 @@ const PlacementOfficer = () => {
                         data={statsModalData}
                         isLoading={isStatsLoading}
                         onDownload={handleDownloadStatsPDF}
+                        onStudentAction={handleStudentAction}
                     />
                 </div>
             </section>
@@ -444,10 +529,10 @@ const PlacementOfficer = () => {
     );
 };
 
-const StatsModal = ({ isOpen, onClose, title, data, isLoading, onDownload }) => (
+const StatsModal = ({ isOpen, onClose, title, data, isLoading, onDownload, onStudentAction }) => (
     <AnimatePresence>
         {isOpen && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+            <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
                 <motion.div 
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -476,7 +561,15 @@ const StatsModal = ({ isOpen, onClose, title, data, isLoading, onDownload }) => 
                                                     <th className="pb-4 pr-4">Name</th>
                                                     <th className="pb-4 pr-4">Department</th>
                                                     <th className="pb-4 pr-4">Email</th>
-                                                    <th className="pb-4">CGPA</th>
+                                                    <th className="pb-4 pr-4">CGPA</th>
+                                                    <th className="pb-4">Actions</th>
+                                                </>
+                                            ) : title === "Teachers Registered" ? (
+                                                <>
+                                                    <th className="pb-4 pr-4">Name</th>
+                                                    <th className="pb-4 pr-4">Department</th>
+                                                    <th className="pb-4 pr-4">Designation</th>
+                                                    <th className="pb-4">Email</th>
                                                 </>
                                             ) : (
                                                 <>
@@ -494,10 +587,44 @@ const StatsModal = ({ isOpen, onClose, title, data, isLoading, onDownload }) => 
                                             <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                                 {title === "Students Registered" ? (
                                                     <>
-                                                        <td className="py-4 pr-4 font-medium text-white">{item.full_name}</td>
+                                                        <td className="py-4 pr-4 font-medium text-white">
+                                                            <div className="flex items-center gap-2">
+                                                                {item.full_name}
+                                                                {item.is_blacklisted && (
+                                                                    <span className="bg-red-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase">BL</span>
+                                                                )}
+                                                            </div>
+                                                        </td>
                                                         <td className="py-4 pr-4">{item.department}</td>
                                                         <td className="py-4 pr-4 text-sm text-slate-400">{item.email}</td>
-                                                        <td className="py-4 font-mono text-blue-400">{item.overall_cgpa.toFixed(2)}</td>
+                                                        <td className="py-4 pr-4 font-mono text-blue-400">{typeof item.overall_cgpa === 'number' ? item.overall_cgpa.toFixed(2) : item.overall_cgpa}</td>
+                                                        <td className="py-4">
+                                                            <div className="flex gap-2">
+                                                                <button 
+                                                                    onClick={() => onStudentAction(item.id, 'blacklist')}
+                                                                    className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                                                                        item.is_blacklisted 
+                                                                        ? 'bg-slate-700 text-white' 
+                                                                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                                                    }`}
+                                                                >
+                                                                    {item.is_blacklisted ? 'Whitelist' : 'Blacklist'}
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => onStudentAction(item.id, 'remove')}
+                                                                    className="px-3 py-1 rounded-lg text-xs font-semibold bg-red-600 text-white"
+                                                                >
+                                                                    Remove
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </>
+                                                ) : title === "Teachers Registered" ? (
+                                                    <>
+                                                        <td className="py-4 pr-4 font-medium text-white">{item.full_name}</td>
+                                                        <td className="py-4 pr-4">{item.department}</td>
+                                                        <td className="py-4 pr-4 text-sm text-slate-400">{item.designation}</td>
+                                                        <td className="py-4 text-sm text-slate-400">{item.email}</td>
                                                     </>
                                                 ) : (
                                                     <>

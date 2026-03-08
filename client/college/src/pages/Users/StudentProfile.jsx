@@ -8,7 +8,10 @@ import {
   FileText, 
   Download, 
   Save,
+  Briefcase,
+  ArrowRight
 } from "lucide-react";
+import { toast } from "react-toastify";
 import { useOutletContext, Navigate, useLocation } from "react-router-dom";
 import axios from 'axios';
 import "./StudentProfile.css";
@@ -18,16 +21,17 @@ const StudentProfile = () => {
   const user = context?.user;
   
   const [profile, setProfile] = useState(null);
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   
-  // Normalized role check
-  const userRole = user?.role?.toLowerCase();
+  // Normalized role check - more robust fallback
+  const userRole = (user?.role || localStorage.getItem('userRole') || 'student').toLowerCase();
   const isStudent = userRole === 'student';
   const isTeacher = userRole === 'teacher';
-  const isPlacement = userRole === 'placement';
+  const isPlacement = userRole === 'placement' || userRole === 'pcf';
 
   // Redirect to specific role path if on root /profile
   if (location.pathname === "/profile" && userRole) {
@@ -50,7 +54,13 @@ const StudentProfile = () => {
       if (!user) return;
       
       try {
-        const phone = user.user_id || user.phone;
+        const phone = getPhone();
+        console.log("Fetching profile for:", { phone, role: userRole });
+        if (!phone) {
+          setError("Session expired or phone missing. Please login again.");
+          setLoading(false);
+          return;
+        }
         const res = await axios.get(`${getApiUrl()}?phone=${phone}`);
         const data = res.data;
         setProfile(data);
@@ -124,7 +134,12 @@ const StudentProfile = () => {
     setError(null);
 
     try {
-      const phone = user.user_id || user.phone;
+      const phone = getPhone();
+      if (!phone) {
+        setError("Could not identify user. Please re-login.");
+        setSaving(false);
+        return;
+      }
       const data = new FormData();
       data.append('phone', phone);
       
@@ -135,22 +150,40 @@ const StudentProfile = () => {
       if (imageFile) data.append('image', imageFile);
       if (isStudent && resumeFile) data.append('resume', resumeFile);
 
-      await axios.patch(getApiUrl(), data, {
+      const response = await axios.patch(getApiUrl(), data, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
+      const updatedProfile = response.data;
+      setProfile(updatedProfile);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
       
-      const res = await axios.get(`${getApiUrl()}?phone=${phone}`);
-      setProfile(res.data);
+      // Also update localStorage so other pages have latest image/data
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const newUser = { ...currentUser, ...updatedProfile };
+      // Ensure image URL is absolute for local storage
+      if (newUser.image && typeof newUser.image === 'string' && !newUser.image.startsWith('http')) {
+        const baseUrl = "http://127.0.0.1:8000";
+        newUser.image = newUser.image.startsWith('/') ? `${baseUrl}${newUser.image}` : `${baseUrl}/${newUser.image}`;
+      }
+      localStorage.setItem('user', JSON.stringify(newUser));
     } catch (err) {
       console.error("Profile update error:", err);
-      setError("Failed to update profile.");
+      const msg = err.response?.data?.error || err.response?.data?.message || "Failed to update profile.";
+      setError(msg);
     } finally {
       setSaving(false);
     }
   };
+
+  const getPhone = () => {
+    // Priority: local state > context user > localStorage user > localStorage userId
+    const localUser = JSON.parse(localStorage.getItem('user') || '{}');
+    return user?.phone || user?.user_id || localUser.phone || localUser.user_id || localStorage.getItem('userId') || "";
+  };
+
+
 
   if (loading) {
     return (
@@ -165,8 +198,23 @@ const StudentProfile = () => {
   }
 
   return (
-    <div className="profile-page">
-      <div className="profile-container">
+    <div className="profile-page h-full relative">
+      <div className="profile-container relative py-2 mb-8">
+          {/* Absolute Background Badge (Top Right) */}
+          <div className="profile-badge-corner" style={{ top: '10px', right: '10px' }}>
+            {(profile?.image || user?.image) ? (
+              <img 
+                src={profile?.image || user?.image} 
+                alt="Profile" 
+                className="profile-badge-image shadow-2xl"
+              />
+            ) : (
+              <div className="profile-badge-placeholder shadow-xl">
+                <User size={40} />
+              </div>
+            )}
+          </div>
+
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -209,23 +257,63 @@ const StudentProfile = () => {
             </div>
 
             {isStudent && profile && (
-              <div className="profile-card">
-                 <h3 className="section-title">Academic Record</h3>
-                 <div className="space-y-4">
-                   <div className="flex justify-between items-center text-sm">
-                     <span className="text-slate-400">Overall CGPA</span>
-                     <span className="text-blue-400 font-bold">{profile.overall_cgpa || '0.00'}</span>
-                   </div>
-                   <div className="flex justify-between items-center text-sm">
-                     <span className="text-slate-400">Total Backlogs</span>
-                     <span className="text-orange-400 font-bold">{profile.total_backlogs || '0'}</span>
-                   </div>
-                   <div className="flex justify-between items-center text-sm">
-                     <span className="text-slate-400">Current Semester</span>
-                     <span className="text-white font-bold">{profile.semester || 'N/A'}</span>
-                   </div>
-                 </div>
-              </div>
+              <>
+                <div className="profile-card mt-6">
+                   <h3 className="section-title">Academic Record</h3>
+                   <div className="space-y-4">
+                     <div className="flex justify-between items-center text-sm">
+                       <span className="text-slate-400">Overall CGPA</span>
+                       <span className="text-blue-400 font-bold">{profile.overall_cgpa || '0.00'}</span>
+                     </div>
+                     <div className="flex justify-between items-center text-sm">
+                       <span className="text-slate-400">Total Backlogs</span>
+                       <span className="text-orange-400 font-bold">{profile.total_backlogs || '0'}</span>
+                     </div>
+                     <div className="flex justify-between items-center text-sm">
+                       <span className="text-slate-400">Current Semester</span>
+                       <span className="text-white font-bold">{profile.semester || 'N/A'}</span>
+                     </div>
+                       <div className="flex justify-between items-center text-sm pt-2 border-t border-white/5">
+                         <span className="text-slate-400">ATS Score</span>
+                         <span className={`font-bold ${parseFloat(profile.ats_score) > 50 ? 'text-green-400' : 'text-orange-400'}`}>
+                           {profile.ats_score !== undefined && profile.ats_score !== null ? 
+                             (profile.ats_score > 0 || (resumeFile || profile.resume)) ? `${profile.ats_score}%` : 'Not Checked'
+                             : 'Not Checked'}
+                         </span>
+                       </div>
+                    </div>
+                </div>
+
+                <div className="profile-card mt-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="section-title mb-0 text-white">Eligible Jobs</h3>
+                    <a href="/jobs" className="text-blue-400 text-xs hover:underline flex items-center gap-1 font-medium">
+                      View All <ArrowRight size={12} />
+                    </a>
+                  </div>
+                  <div className="space-y-3">
+                    {profile.eligible_jobs && profile.eligible_jobs.length > 0 ? (
+                      profile.eligible_jobs.map((job) => (
+                        <div key={job.id} className="p-3 rounded-lg bg-white/5 border border-white/10 hover:border-blue-500/30 transition-all cursor-pointer group">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <h4 className="text-sm font-semibold text-white group-hover:text-blue-400 transition-colors truncate max-w-[150px]">{job.role}</h4>
+                              <p className="text-xs text-slate-400">{job.company}</p>
+                            </div>
+                            <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full whitespace-nowrap">
+                              {job.location}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 rounded-lg bg-white/5 border border-dashed border-white/10 text-center">
+                        <p className="text-xs text-slate-500 italic">Looking for matching opportunities...</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
             )}
           </div>
 
@@ -384,11 +472,13 @@ const StudentProfile = () => {
                           )}
                         </div>
                       </div>
-                      <label className="btn-primary text-sm cursor-pointer py-2 px-4 whitespace-nowrap">
-                        {profile?.resume ? 'Update Resume' : 'Upload Resume'}
-                        <input type="file" className="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx" />
-                      </label>
                     </div>
+                  </div>
+                  <div className="flex gap-3 mt-4">
+                    <label className="btn-primary text-sm cursor-pointer py-2 px-4 whitespace-nowrap">
+                      {profile?.resume ? 'Update Resume' : 'Upload Resume'}
+                      <input type="file" name="resume" className="hidden" onChange={handleFileChange} accept=".pdf,.doc,.docx" />
+                    </label>
                   </div>
                 </div>
               )}
@@ -411,6 +501,8 @@ const StudentProfile = () => {
             </form>
           </div>
         </motion.div>
+
+
       </div>
     </div>
   );

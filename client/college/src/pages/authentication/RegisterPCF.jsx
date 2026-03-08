@@ -10,6 +10,8 @@ import {
   Image as ImageIcon,
   ChevronRight,
   Loader2,
+  RefreshCw,
+  ShieldCheck,
 } from "lucide-react";
 import axios from "axios";
 import "./Register.css";
@@ -31,17 +33,47 @@ const RegisterPCF = () => {
     password: "",
     confirm_password: "",
     image: null,
+    captcha_value: "",
   });
+
+  const [captcha, setCaptcha] = useState({ key: "", image: null });
+  const [isCaptchaLoading, setIsCaptchaLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  React.useEffect(() => {
+    fetchCaptcha();
+  }, []);
+
+  const fetchCaptcha = async () => {
+    setIsCaptchaLoading(true);
+    try {
+      const res = await axios.get("http://127.0.0.1:8000/api/accounts/captcha/");
+      setCaptcha({ key: res.data.captcha_key, image: res.data.captcha_image });
+      setFormData(prev => ({ ...prev, captcha_value: "" }));
+    } catch (err) {
+      console.error("Failed to fetch captcha:", err);
+    } finally {
+      setIsCaptchaLoading(false);
+    }
+  };
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
-    setFormData({
-      ...formData,
-      [name]: files ? files[0] : value,
-    });
+    
+    if (name === "image" && files && files[0]) {
+      const file = files[0];
+      setFormData({ ...formData, image: file });
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+      setImagePreview(URL.createObjectURL(file));
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
     setError("");
   };
 
@@ -51,6 +83,12 @@ const RegisterPCF = () => {
 
     if (formData.password !== formData.confirm_password) {
       setError("Passwords do not match.");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.captcha_value) {
+      setError("Please prove you're not a robot! 🤖");
       setLoading(false);
       return;
     }
@@ -67,6 +105,8 @@ const RegisterPCF = () => {
         college: formData.college,
         password: formData.password,
         image: formData.image,
+        captcha_key: captcha.key,
+        captcha_value: formData.captcha_value,
       };
       
       const formDataToSend = new FormData();
@@ -90,6 +130,7 @@ const RegisterPCF = () => {
        console.error("Registration Error:", err);
        setError(err.response?.data?.error || "Registration failed. Please try again.");
        setLoading(false);
+       fetchCaptcha();
     }
   };
 
@@ -130,9 +171,48 @@ const RegisterPCF = () => {
               <Input icon={<Lock />} type="password" name="confirm_password" placeholder="Confirm Password" onChange={handleChange} required />
 
               <div className="file-upload">
-                <ImageIcon size={18} />
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Preview" style={{ width: '40px', height: '40px', borderRadius: '4px', objectFit: 'cover' }} />
+                ) : (
+                  <ImageIcon size={18} />
+                )}
                 <input type="file" name="image" accept="image/*" onChange={handleChange} />
-                <span>Upload Profile Image</span>
+                <span>{formData.image ? formData.image.name : "Upload Profile Image"}</span>
+              </div>
+
+              {/* Captcha Section */}
+              <div className="captcha-section md:col-span-2">
+                <div className="funny-quote" style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.5rem', textAlign: 'center' }}>
+                  Are you a robot? 🤖 Then prove it! 🧐...
+                </div>
+                <div className="captcha-container" style={{ display: 'flex', gap: '1rem', alignItems: 'center', background: 'rgba(15, 23, 42, 0.5)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  <div className="captcha-image-wrapper" style={{ position: 'relative' }}>
+                    {isCaptchaLoading ? (
+                      <div style={{ padding: '10px' }}><Loader2 className="spin" size={20} /></div>
+                    ) : captcha.image ? (
+                      <img src={captcha.image} alt="Captcha" style={{ height: '40px', borderRadius: '4px' }} />
+                    ) : null}
+                    <button 
+                      type="button" 
+                      onClick={fetchCaptcha} 
+                      style={{ position: 'absolute', top: '-10px', right: '-10px', background: '#3b82f6', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyCenter: 'center', cursor: 'pointer', color: 'white' }}
+                      disabled={isCaptchaLoading}
+                    >
+                      <RefreshCw size={12} className={isCaptchaLoading ? "spin" : ""} />
+                    </button>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <Input 
+                      icon={<ShieldCheck size={18} />} 
+                      name="captcha_value" 
+                      placeholder="Verify Captcha" 
+                      value={formData.captcha_value}
+                      onChange={handleChange}
+                      required
+                      style={{ marginBottom: 0 }}
+                    />
+                  </div>
+                </div>
               </div>
 
               <motion.button

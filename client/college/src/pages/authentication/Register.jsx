@@ -13,6 +13,10 @@ import {
   Image as ImageIcon,
   ChevronRight,
   Loader2,
+  RefreshCw,
+  ShieldCheck,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -41,19 +45,40 @@ const Register = () => {
     password: "",
     confirm_password: "",
     image: null,
+    captcha_value: "",
+    dept_code: "",
   });
+
+  const [captcha, setCaptcha] = useState({ key: "", image: null });
+  const [isCaptchaLoading, setIsCaptchaLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
+    fetchCaptcha();
     return () => {
       if (imagePreview) {
         URL.revokeObjectURL(imagePreview);
       }
     };
   }, [imagePreview]);
+
+  const fetchCaptcha = async () => {
+    setIsCaptchaLoading(true);
+    try {
+      const res = await axios.get("http://127.0.0.1:8000/api/accounts/captcha/");
+      setCaptcha({ key: res.data.captcha_key, image: res.data.captcha_image });
+      setFormData(prev => ({ ...prev, captcha_value: "" }));
+    } catch (err) {
+      console.error("Failed to fetch captcha:", err);
+    } finally {
+      setIsCaptchaLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -88,6 +113,8 @@ const Register = () => {
       phone: formData.phone,
       password: formData.password,
       image: formData.image,
+      captcha_key: captcha.key,
+      captcha_value: formData.captcha_value,
     };
 
     if (role === "student") {
@@ -111,6 +138,7 @@ const Register = () => {
         department: formData.department,
         experience: formData.experience,
         position: formData.position,
+        dept_code: formData.dept_code,
       };
     }
   };
@@ -146,6 +174,30 @@ const Register = () => {
 
     if (formData.password.length < 8) {
       setError("Password must be at least 8 characters long.");
+      setLoading(false);
+      return;
+    }
+
+    if (!/[A-Z]/.test(formData.password)) {
+      setError("Password must contain at least one uppercase letter (A-Z).");
+      setLoading(false);
+      return;
+    }
+
+    if (!/[a-z]/.test(formData.password)) {
+      setError("Password must contain at least one lowercase letter (a-z).");
+      setLoading(false);
+      return;
+    }
+
+    if (!/[@!#$%^&*()_+\-=[\]{}|;:,.<>?/~`]/.test(formData.password)) {
+      setError("Password must contain at least one special character (e.g., @!#$%).");
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.captcha_value) {
+      setError("Please prove you're not a robot! 🤖");
       setLoading(false);
       return;
     }
@@ -210,6 +262,7 @@ const Register = () => {
        
        setError(errorMsg);
        setLoading(false);
+       fetchCaptcha(); // Refresh captcha on failure
     }
   };
 
@@ -276,12 +329,58 @@ const Register = () => {
                   <Select name="department" options={["BME","EEE","EL","CM","CT","RPA"]} onChange={handleChange} />
                   <Input name="experience" placeholder="Years of Experience" onChange={handleChange} />
                   <Select name="position" options={["HOD","Faculty"]} onChange={handleChange} />
+                  <Input 
+                    icon={<ShieldCheck size={18} />} 
+                    name="dept_code" 
+                    placeholder="Department Code (e.g. CTPLACE26)" 
+                    value={formData.dept_code}
+                    onChange={handleChange} 
+                    required 
+                  />
                 </>
               )}
 
               {/* Password */}
-              <Input icon={<Lock />} type="password" name="password" placeholder="Password" onChange={handleChange} />
-              <Input icon={<Lock />} type="password" name="confirm_password" placeholder="Confirm Password" onChange={handleChange} />
+              <div className="relative">
+                <Input 
+                  icon={<Lock />} 
+                  type={showPassword ? "text" : "password"} 
+                  name="password" 
+                  placeholder="Password" 
+                  onChange={handleChange} 
+                  style={{ paddingRight: '3rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-[10px] text-slate-400 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+              <div className="relative">
+                <Input 
+                  icon={<Lock />} 
+                  type={showConfirmPassword ? "text" : "password"} 
+                  name="confirm_password" 
+                  placeholder="Confirm Password" 
+                  onChange={handleChange} 
+                  style={{ paddingRight: '3rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-[10px] text-slate-400 hover:text-white transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              <div className="password-requirements" style={{ gridColumn: '1 / -1' }}>
+                <p className="text-xs text-slate-500 mt-1 mb-2">
+                  * Password must be at least 8 characters, include uppercase, lowercase, and a special character (@!#$%).
+                </p>
+              </div>
 
               {/* Profile Image */}
               <div className="file-upload-wrapper">
@@ -301,11 +400,42 @@ const Register = () => {
                     </>
                   )}
                 </label>
-                {imagePreview && (
-                  <button type="button" onClick={handleRemoveImage} className="remove-image-btn">
-                    Remove Image
-                  </button>
-                )}
+              </div>
+
+              {/* Captcha Section */}
+              <div className="captcha-section md:col-span-2">
+                <div className="funny-quote">
+                  Are you a robot? 🤖 Then prove it! 🧐...
+                </div>
+                <div className="captcha-container">
+                  <div className="captcha-image-wrapper">
+                    {isCaptchaLoading ? (
+                      <div className="captcha-loader">
+                        <Loader2 className="spin" size={20} />
+                      </div>
+                    ) : captcha.image ? (
+                      <img src={captcha.image} alt="Captcha" className="captcha-image" />
+                    ) : null}
+                    <button 
+                      type="button" 
+                      onClick={fetchCaptcha} 
+                      className="refresh-captcha"
+                      disabled={isCaptchaLoading}
+                    >
+                      <RefreshCw size={16} className={isCaptchaLoading ? "spin" : ""} />
+                    </button>
+                  </div>
+                  <div className="captcha-input-wrapper">
+                    <Input 
+                      icon={<ShieldCheck size={18} />} 
+                      name="captcha_value" 
+                      placeholder="Enter the characters above" 
+                      value={formData.captcha_value}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Submit */}

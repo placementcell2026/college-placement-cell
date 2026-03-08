@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { User, Lock, Briefcase, GraduationCap, ChevronRight, Loader2 } from "lucide-react";
+import { User, Lock, Briefcase, GraduationCap, ChevronRight, Loader2, Eye, EyeOff } from "lucide-react";
 import "./Login.css";
 
 const Login = () => {
@@ -15,6 +15,7 @@ const Login = () => {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -102,18 +103,25 @@ const Login = () => {
                 />
               </div>
 
-              <div className="form-group">
+              <div className="form-group relative">
                 <div className="input-icon">
                   <Lock size={20} />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   placeholder="Password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="input-field"
+                  className="input-field pr-12"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
 
               <div className="form-group select-wrapper">

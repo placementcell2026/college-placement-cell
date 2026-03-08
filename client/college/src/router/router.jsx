@@ -16,6 +16,9 @@ const Student = lazy(() => import("../pages/Users/Student"));
 const Teacher = lazy(() => import("../pages/Users/Teacher"));
 const PlacementOfficer = lazy(() => import("../pages/Users/PlacementOfficer"));
 const ManageDepartments = lazy(() => import("../pages/Users/ManageDepartments"));
+const StudentList = lazy(() => import("../pages/Users/StudentList"));
+const Companies = lazy(() => import("../pages/Companies"));
+const TeacherInterviews = lazy(() => import("../pages/Users/TeacherInterviews"));
 
 const router = createBrowserRouter([
   {
@@ -35,7 +38,14 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Home /> },
           { path: "student", element: <Student /> },
-          { path: "teacher", element: <Teacher /> },
+          { 
+            path: "teacher", 
+            children: [
+              { index: true, element: <Teacher /> },
+              { path: "students", element: <StudentList /> },
+              { path: "interviews", element: <TeacherInterviews /> }
+            ]
+          },
           { 
             path: "placement", 
             children: [
@@ -61,6 +71,10 @@ const router = createBrowserRouter([
       {
         path: "jobs",
         element: <Jobs />,
+      },
+      {
+        path: "companies",
+        element: <Companies />,
       },
     ],
   },

@@ -42,7 +42,10 @@ const Jobs = () => {
     deadline: '',
     qualification: '',
     responsibilities: '',
-    requirements: ''
+    requirements: '',
+    meeting_link: '',
+    department: '',
+    attachment: null
   });
 
   useEffect(() => {
@@ -66,17 +69,23 @@ const Jobs = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e) => {
+    setFormData(prev => ({ ...prev, attachment: e.target.files[0] }));
+  };
+
   const handleCreateJob = async (e) => {
     e.preventDefault();
     try {
       await axios.post("http://127.0.0.1:8000/api/placement/jobs/", formData);
       toast.success("Job Drive scheduled successfully!");
+      
       setShowCreateForm(false);
       setFormData({
         company: '', role: '', location: '', job_type: 'Full Time',
         salary: '', description: '', skills_required: '',
         min_cgpa: 0, max_backlogs: 0, allowed_departments: '', deadline: '',
-        qualification: '', responsibilities: '', requirements: ''
+        qualification: '', responsibilities: '', requirements: '',
+        meeting_link: '', department: '', attachment: null
       });
       // Refresh jobs list
       const response = await axios.get("http://127.0.0.1:8000/api/placement/jobs/");
@@ -132,13 +141,17 @@ const Jobs = () => {
                 <p className="hero-subtitle">Explore and apply for the latest job openings.</p>
               </div>
               {user?.role === 'placement' && (
-                <button 
-                  onClick={() => setShowCreateForm(true)}
-                  className="apply-btn flex items-center gap-2" 
-                  style={{ width: 'auto', opacity: 1, transform: 'none', padding: '0.75rem 1.5rem' }}
-                >
-                  <Plus size={20} /> Schedule New Drive
-                </button>
+                <div className="flex gap-4">
+                  <button 
+                    onClick={() => {
+                      setShowCreateForm(true);
+                    }}
+                    className="apply-btn flex items-center gap-2" 
+                    style={{ width: 'auto', opacity: 1, transform: 'none', padding: '0.75rem 1.5rem' }}
+                  >
+                    <Plus size={20} /> Schedule New Drive
+                  </button>
+                </div>
               )}
             </div>
           </motion.div>
@@ -171,7 +184,7 @@ const Jobs = () => {
                     <div className="job-card-content p-6">
                       <div className="flex justify-between items-start w-full">
                         <div className="flex gap-4">
-                          <div className="company-logo flex-shrink-0">
+                          <div className="company-logo shrink-0">
                             {job.company[0]}
                           </div>
                           <div>
@@ -311,79 +324,84 @@ const Jobs = () => {
               className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto"
             >
               <div className="sticky top-0 bg-slate-900 p-6 border-b border-white/10 flex justify-between items-center z-10">
-                <h2 className="text-xl font-bold text-white">Schedule New Job Drive</h2>
+                <h2 className="text-xl font-bold text-white">
+                  Schedule New Job Drive
+                </h2>
                 <button onClick={() => setShowCreateForm(false)} className="text-slate-400 hover:text-white">
                   <X size={24} />
                 </button>
               </div>
-              <form onSubmit={handleCreateJob} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm text-slate-400">Company Name</label>
-                    <input required name="company" value={formData.company} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
-                  </div>
-                  <div>
-                    <label className="text-sm text-slate-400">Job Role</label>
-                    <input required name="role" value={formData.role} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
-                  </div>
-                  <div>
-                    <label className="text-sm text-slate-400">Location</label>
-                    <input required name="location" value={formData.location} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="e.g. Kochi, Kerala" />
-                  </div>
-                  <div>
-                    <label className="text-sm text-slate-400">Job Type</label>
-                    <select name="job_type" value={formData.job_type} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white">
-                      <option value="Full Time">Full Time</option>
-                      <option value="Internship">Internship</option>
-                      <option value="Part Time">Part Time</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-sm text-slate-400">Salary Package</label>
-                    <input required name="salary" value={formData.salary} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="e.g. 12 LPA" />
-                  </div>
-                  <div>
-                    <label className="text-sm text-slate-400">Qualification</label>
-                    <input required name="qualification" value={formData.qualification} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="e.g. B.Tech, Diploma" />
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleCreateJob} className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
                     <div>
-                      <label className="text-sm text-slate-400">Min CGPA</label>
-                      <input type="number" step="0.01" name="min_cgpa" value={formData.min_cgpa} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                      <label className="text-sm text-slate-400">Company Name</label>
+                      <input required name="company" value={formData.company} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
                     </div>
                     <div>
-                      <label className="text-sm text-slate-400">Max Backlogs</label>
-                      <input type="number" name="max_backlogs" value={formData.max_backlogs} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                      <label className="text-sm text-slate-400">Job Role</label>
+                      <input required name="role" value={formData.role} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Location</label>
+                      <input required name="location" value={formData.location} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="e.g. Kochi, Kerala" />
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Job Type</label>
+                      <select name="job_type" value={formData.job_type} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white">
+                        <option value="Full Time">Full Time</option>
+                        <option value="Internship">Internship</option>
+                        <option value="Part Time">Part Time</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Salary Package</label>
+                      <input required name="salary" value={formData.salary} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="e.g. 12 LPA" />
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Qualification</label>
+                      <input required name="qualification" value={formData.qualification} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="e.g. B.Tech, Diploma" />
                     </div>
                   </div>
-                  <div>
-                    <label className="text-sm text-slate-400">Allowed Departments</label>
-                    <input required name="allowed_departments" value={formData.allowed_departments} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="CSE, ECE, ME" />
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm text-slate-400">Min CGPA</label>
+                        <input type="number" step="0.01" name="min_cgpa" value={formData.min_cgpa} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                      </div>
+                      <div>
+                        <label className="text-sm text-slate-400">Max Backlogs</label>
+                        <input type="number" name="max_backlogs" value={formData.max_backlogs} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Allowed Departments</label>
+                      <input required name="allowed_departments" value={formData.allowed_departments} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="CSE, ECE, ME" />
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Deadline</label>
+                      <input required type="datetime-local" name="deadline" value={formData.deadline} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                    </div>
+                    <div>
+                      <label className="text-sm text-slate-400">Skills Required</label>
+                      <input required name="skills_required" value={formData.skills_required} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="React, Node.js, SQL" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-sm text-slate-400">Deadline</label>
-                    <input required type="datetime-local" name="deadline" value={formData.deadline} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-slate-400">Job Description</label>
+                    <textarea required name="description" value={formData.description} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white"></textarea>
                   </div>
-                  <div>
-                    <label className="text-sm text-slate-400">Skills Required</label>
-                    <input required name="skills_required" value={formData.skills_required} onChange={handleInputChange} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="React, Node.js, SQL" />
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-slate-400">Job Requirements</label>
+                    <textarea required name="requirements" value={formData.requirements} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="List technology, experience, etc."></textarea>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="text-sm text-slate-400">Key Responsibilities</label>
+                    <textarea required name="responsibilities" value={formData.responsibilities} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="Describe the daily tasks..."></textarea>
                   </div>
                 </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm text-slate-400">Job Description</label>
-                  <textarea required name="description" value={formData.description} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white"></textarea>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm text-slate-400">Job Requirements</label>
-                  <textarea required name="requirements" value={formData.requirements} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="List technology, experience, etc."></textarea>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-sm text-slate-400">Key Responsibilities</label>
-                  <textarea required name="responsibilities" value={formData.responsibilities} onChange={handleInputChange} rows="3" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" placeholder="Describe the daily tasks..."></textarea>
-                </div>
-                <div className="md:col-span-2 pt-4">
+                
+                <div className="pt-6">
                   <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-all">
                     Create Job Drive
                   </button>

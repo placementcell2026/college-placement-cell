@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertCircle, RotateCcw, ExternalLink } from "lucide-react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/footer";
 
@@ -8,6 +10,11 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isDuplicateTab, setIsDuplicateTab] = useState(false);
+  
+  // Unique ID for this specific tab session
+  const tabId = useRef(Math.random().toString(36).substring(2, 11)).current;
+  const channel = useRef(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
@@ -15,7 +22,7 @@ const MainLayout = () => {
       setUser(JSON.parse(savedUser));
     }
     setLoading(false);
-  }, []);
+  }, [location.pathname]);
 
   const internalPages = ["/home", "/profile", "/notifications", "/jobs", "/companies"];
   const showNavbar = internalPages.some(path => location.pathname.startsWith(path));

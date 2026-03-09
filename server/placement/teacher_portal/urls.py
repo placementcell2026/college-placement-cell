@@ -2,7 +2,8 @@ from django.urls import path
 from .views import (
     TeacherDashboardView, PendingRegistrationsView, ApproveRegistrationView, 
     RejectRegistrationView, TeacherProfileView, TeacherStudentListView,
-    TeacherInterviewView, SelectStudentsForInterviewView
+    TeacherInterviewView, SelectStudentsForInterviewView, TeacherAnnouncementView,
+    AlertIncompleteProfilesView
 )
 
 urlpatterns = [
@@ -14,4 +15,6 @@ urlpatterns = [
     path('students/', TeacherStudentListView.as_view(), name='teacher-student-list'),
     path('interviews/', TeacherInterviewView.as_view(), name='teacher-interviews'),
     path('interviews/select-students/', SelectStudentsForInterviewView.as_view(), name='select-students-for-interview'),
+    path('announcement/', TeacherAnnouncementView.as_view(), name='teacher-announcement'),
+    path('alert-incomplete-profiles/', AlertIncompleteProfilesView.as_view(), name='alert-incomplete-profiles'),
 ]

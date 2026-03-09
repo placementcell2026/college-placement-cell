@@ -243,3 +243,28 @@ class StudentProfileView(APIView):
             import traceback
             traceback.print_exc()
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class WebSearchView(APIView):
+    def get(self, request):
+        query = request.query_params.get('query')
+        if not query:
+            return Response({"error": "Query parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from ddgs import DDGS
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=5))
+                
+            formatted_results = []
+            for r in results:
+                formatted_results.append({
+                    "title": r.get('title'),
+                    "link": r.get('href'),
+                    "snippet": r.get('body')
+                })
+                
+            return Response({"results": formatted_results})
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -1,0 +1,8 @@
+{
+    "python.analysis.extraPaths": [
+        "./server/placement"
+    ],
+    "python.autoComplete.extraPaths": [
+        "./server/placement"
+    ]
+}

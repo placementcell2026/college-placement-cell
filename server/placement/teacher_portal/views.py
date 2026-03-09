@@ -19,6 +19,7 @@ class TeacherDashboardView(APIView):
             pending_approvals = RegistrationRequest.objects.filter(department__iexact=dept, status='Pending').count()
             # Placeholder for placed students until that logic is implemented
             placed_students = Student.objects.filter(department__iexact=dept, applications__status='Selected').distinct().count()
+            incomplete_profiles = Student.objects.filter(department__iexact=dept, user__is_active=True, profile_completion__lt=100).count()
 
             data = {
                 "message": f"Welcome to the {dept} Teacher Dashboard",
@@ -26,11 +27,13 @@ class TeacherDashboardView(APIView):
                     {"label": "Total Students", "value": str(total_students)},
                     {"label": "Placed Students", "value": str(placed_students)},
                     {"label": "Pending Approvals", "value": str(pending_approvals)},
-                ]
+                ],
+                "incomplete_profiles": incomplete_profiles
             }
             return Response(data)
         except Teacher.DoesNotExist:
             return Response({"error": "Teacher profile not found"}, status=status.HTTP_404_NOT_FOUND)
+
 
 class PendingRegistrationsView(APIView):
     def get(self, request):
@@ -281,3 +284,88 @@ class SelectStudentsForInterviewView(APIView):
             return Response({"error": "Interview not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class TeacherAnnouncementView(APIView):
+    def post(self, request):
+        phone = request.data.get('phone')
+        title = request.data.get('title')
+        message = request.data.get('message')
+        
+        if not phone or not title or not message:
+            return Response({"error": "Phone, title, and message are required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            teacher = Teacher.objects.get(user__phone=phone)
+            students = Student.objects.filter(department__iexact=teacher.department, user__is_active=True)
+            
+            # Create notifications for all students in the department
+            notifications = []
+            for student in students:
+                notifications.append(
+                    Notification(
+                        user=student.user,
+                        title=f"Announcement: {title}",
+                        message=message,
+                        extra_data={"type": "announcement", "teacher": teacher.user.full_name, "department": teacher.department}
+                    )
+                )
+            
+            if notifications:
+                Notification.objects.bulk_create(notifications)
+                
+            return Response({"message": f"Announcement sent successfully to {len(students)} students in the {teacher.department} department."})
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AlertIncompleteProfilesView(APIView):
+    def post(self, request):
+        phone = request.data.get('phone')
+        
+        if not phone:
+            return Response({"error": "Phone is required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            teacher = Teacher.objects.get(user__phone=phone)
+            incomplete_students = Student.objects.filter(
+                department__iexact=teacher.department, 
+                user__is_active=True, 
+                profile_completion__lt=100
+            )
+            
+            if not incomplete_students.exists():
+                return Response({"message": "No students found with incomplete profiles."})
+                
+            notifications = []
+            for student in incomplete_students:
+                missing = []
+                if not student.resume:
+                    missing.append("Resume")
+                if student.overall_cgpa == 0:
+                    missing.append("CGPA/Marks")
+                if not student.skills:
+                    missing.append("Skills")
+                if not student.image:
+                    missing.append("Profile Photo")
+                
+                details = ", ".join(missing) if missing else "some required fields"
+                
+                notifications.append(
+                    Notification(
+                        user=student.user,
+                        title="Action Required: Incomplete Profile",
+                        message=f"Please complete your profile to be eligible for placements. You are missing: {details}.",
+                        extra_data={"type": "profile_alert", "teacher": teacher.user.full_name}
+                    )
+                )
+            
+            if notifications:
+                Notification.objects.bulk_create(notifications)
+                
+            return Response({"message": f"Alert sent successfully to {len(notifications)} students."})
+            
+        except Teacher.DoesNotExist:
+            return Response({"error": "Teacher profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

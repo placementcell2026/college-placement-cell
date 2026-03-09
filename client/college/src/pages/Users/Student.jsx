@@ -30,6 +30,12 @@ const Student = () => {
   const [applyingId, setApplyingId] = React.useState(null);
   const [allDriveDates, setAllDriveDates] = React.useState([]);
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
+  
+  // Web Search States
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [searchResults, setSearchResults] = React.useState([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [hasSearched, setHasSearched] = React.useState(false);
 
   React.useEffect(() => {
     const fetchDashboardData = async () => {
@@ -68,6 +74,23 @@ const Student = () => {
       toast.error(error.response?.data?.error || "Failed to apply");
     } finally {
       setApplyingId(null);
+    }
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    
+    setIsSearching(true);
+    setHasSearched(true);
+    try {
+      const response = await axios.get(`http://127.0.0.1:8000/api/student/web-search/?query=${encodeURIComponent(searchQuery)}`);
+      setSearchResults(response.data.results || []);
+    } catch (error) {
+      console.error("Search failed:", error);
+      toast.error("Failed to fetch search results");
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -146,16 +169,66 @@ const Student = () => {
             })}
           </div>
 
-          {/* Search Bar */}
-          <div className="search-container">
-            <div className="search-icon-wrapper">
-              <Search className="search-icon" />
-            </div>
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Search for jobs, companies, or skills..."
-            />
+          {/* Web Search Section */}
+          <div className="mb-10">
+            <form onSubmit={handleSearch} className="search-container relative w-full mb-6">
+              <div className="search-icon-wrapper absolute left-0 top-0 bottom-0 flex items-center pl-4 pr-3 text-slate-400">
+                <Search className="search-icon" />
+              </div>
+              <input
+                type="text"
+                className="search-input w-full bg-slate-800/50 border border-slate-700/50 text-white pl-12 pr-32 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all placeholder-slate-500"
+                placeholder="Search the web for placement guides, interview tips..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <button 
+                type="submit"
+                disabled={isSearching || !searchQuery.trim()}
+                className="absolute right-2 top-2 bottom-2 bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-xl font-medium transition-colors disabled:opacity-50"
+              >
+                {isSearching ? 'Searching...' : 'Search'}
+              </button>
+            </form>
+
+            {/* Results Area */}
+            {hasSearched && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-slate-900/50 border border-white/10 rounded-2xl p-6 shadow-xl"
+              >
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <BookOpen size={20} className="text-blue-400" /> Web Search Results
+                </h3>
+                
+                {isSearching ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <div className="space-y-3">
+                    {searchResults.map((result, idx) => (
+                      <a 
+                        href={result.link} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        key={idx}
+                        className="block p-4 bg-slate-800/40 hover:bg-slate-800 border border-transparent hover:border-slate-700 rounded-xl transition-all group"
+                      >
+                        <h4 className="text-blue-400 font-semibold text-[15px] group-hover:underline mb-1 whitespace-nowrap overflow-hidden text-ellipsis">{result.title}</h4>
+                        <p className="text-xs text-emerald-500/80 mb-2 truncate">{result.link}</p>
+                        <p className="text-sm text-slate-300 line-clamp-2">{result.snippet}</p>
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-slate-500">No results found for "{searchQuery}". Try different keywords.</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
           </div>
 
           <div className="content-grid">

@@ -30,6 +30,8 @@ const Student = () => {
   const [applyingId, setApplyingId] = React.useState(null);
   const [allDriveDates, setAllDriveDates] = React.useState([]);
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
+  const [posters, setPosters] = React.useState([]);
+  const [isPostersLoading, setIsPostersLoading] = React.useState(false);
   
   // Web Search States
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -41,13 +43,17 @@ const Student = () => {
     const fetchDashboardData = async () => {
       try {
         const phone = user?.user_id || user?.phone;
-        const response = await axios.get(`http://127.0.0.1:8000/api/student/dashboard/?phone=${phone}`);
+        const [dashRes, postersRes] = await Promise.all([
+          axios.get(`http://127.0.0.1:8000/api/student/dashboard/?phone=${phone}`),
+          axios.get(`http://127.0.0.1:8000/api/placement/posters/`)
+        ]);
         
-        setStudentInfo(response.data.student_info);
-        setStats(response.data.stats || []);
-        setRecommendedJobs(response.data.recommended_jobs || []);
-        setUpcomingDrives(response.data.upcoming_drives || []);
-        setAllDriveDates(response.data.all_drive_dates || []);
+        setStudentInfo(dashRes.data.student_info);
+        setStats(dashRes.data.stats || []);
+        setRecommendedJobs(dashRes.data.recommended_jobs || []);
+        setUpcomingDrives(dashRes.data.upcoming_drives || []);
+        setAllDriveDates(dashRes.data.all_drive_dates || []);
+        setPosters(postersRes.data || []);
       } catch (error) {
         console.error("Error fetching student dashboard data:", error);
         setStats([]); 
@@ -285,6 +291,38 @@ const Student = () => {
                  ) : (
                    <p className="text-center text-slate-500 py-4">No upcoming drives.</p>
                  )}
+              </div>
+
+              {/* Drive Posters Section */}
+              <div className="mt-10">
+                <div className="section-header">
+                   <h2 className="section-title">Drive Posters</h2>
+                </div>
+                <div className="space-y-4">
+                   {posters.map((poster) => (
+                     <motion.div 
+                       key={poster.id}
+                       initial={{ opacity: 0, scale: 0.95 }}
+                       animate={{ opacity: 1, scale: 1 }}
+                       className="bg-slate-900/50 border border-white/10 rounded-2xl overflow-hidden group cursor-pointer"
+                       onClick={() => window.open(poster.image, '_blank')}
+                     >
+                       <div className="aspect-ratio relative overflow-hidden" style={{ aspectRatio: '4/5' }}>
+                         <img 
+                           src={poster.image} 
+                           alt={poster.title} 
+                           className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                         />
+                         <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/80 to-transparent p-4">
+                            <p className="text-white font-semibold text-sm truncate">{poster.title}</p>
+                         </div>
+                       </div>
+                     </motion.div>
+                   ))}
+                   {posters.length === 0 && (
+                     <p className="text-center text-slate-500 py-4 text-sm italic">No posters available.</p>
+                   )}
+                </div>
               </div>
             </div>
           </div>

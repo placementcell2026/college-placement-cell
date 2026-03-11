@@ -1,7 +1,16 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.db import transaction
-from .models import User, Student, Teacher, PlacementOfficer, SemesterResult, Job, JobApplication, Notification, Interview
+from .models import User, Student, Teacher, PlacementOfficer, SemesterResult, Job, JobApplication, Notification, Interview, DrivePoster
+
+class DrivePosterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DrivePoster
+        fields = '__all__'
+        extra_kwargs = {
+            'posted_by': {'required': False, 'allow_null': True}
+        }
+
 
 class SemesterResultSerializer(serializers.ModelSerializer):
     class Meta:

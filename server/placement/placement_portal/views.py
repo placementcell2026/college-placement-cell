@@ -3,8 +3,25 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.http import HttpResponse
-from accounts.models import Job, JobApplication, Student, PlacementOfficer, Teacher, Interview
-from accounts.serializers import JobSerializer, JobApplicationSerializer, InterviewSerializer
+from accounts.models import Job, JobApplication, Student, PlacementOfficer, Teacher, Interview, DrivePoster
+from accounts.serializers import JobSerializer, JobApplicationSerializer, InterviewSerializer, DrivePosterSerializer
+
+class DrivePosterViewSet(viewsets.ModelViewSet):
+    queryset = DrivePoster.objects.all().order_by('-posted_on')
+    serializer_class = DrivePosterSerializer
+
+    def perform_create(self, serializer):
+        phone = self.request.data.get('phone')
+        if phone:
+            from accounts.models import User
+            user = User.objects.filter(phone=phone).first()
+            if user:
+                serializer.save(posted_by=user)
+            else:
+                serializer.save()
+        else:
+            serializer.save()
+
 import io
 
 # Try to import reportlab, if not available, we will handle it

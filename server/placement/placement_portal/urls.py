@@ -3,12 +3,15 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     PlacementDashboardView, JobViewSet, PlacementOfficerProfileView,
     RegisteredStudentsView, TotalApplicationsView, ExportStudentsPDFView, ExportApplicationsPDFView,
-    RegisteredTeachersView, ExportTeachersPDFView, DepartmentListView, InterviewViewSet
+    RegisteredTeachersView, ExportTeachersPDFView, DepartmentListView, InterviewViewSet,
+    DrivePosterViewSet
 )
 
 router = DefaultRouter()
 router.register(r'jobs', JobViewSet, basename='job')
 router.register(r'interviews', InterviewViewSet, basename='interview')
+router.register(r'posters', DrivePosterViewSet, basename='poster')
+
 
 urlpatterns = [
     path('dashboard/', PlacementDashboardView.as_view(), name='placement-dashboard'),

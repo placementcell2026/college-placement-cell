@@ -249,11 +249,11 @@ class WebSearchView(APIView):
         query = request.query_params.get('query')
         if not query:
             return Response({"error": "Query parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
-
+        search_query = f"{query} job interview placement career tips"
         try:
             from ddgs import DDGS
             with DDGS() as ddgs:
-                results = list(ddgs.text(query, max_results=5))
+                results = list(ddgs.text(search_query, max_results=5))
                 
             formatted_results = []
             for r in results:

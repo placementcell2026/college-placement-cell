@@ -30,6 +30,16 @@ const PlacementOfficer = () => {
     const [expandedJob, setExpandedJob] = useState(null);
     const [jobApplicants, setJobApplicants] = useState({});
     
+    // Poster States
+    const [posters, setPosters] = useState([]);
+    const [isPostersLoading, setIsPostersLoading] = useState(false);
+    const [showPosterModal, setShowPosterModal] = useState(false);
+    const [posterFormData, setPosterFormData] = useState({
+        title: '',
+        image: null
+    });
+    const [isSubmittingPoster, setIsSubmittingPoster] = useState(false);
+    
     // Stats Modal State
     const [showStatsModal, setShowStatsModal] = useState(false);
     const [statsModalType, setStatsModalType] = useState(null); // 'Registered Students', 'Total Applications'
@@ -58,12 +68,14 @@ const PlacementOfficer = () => {
 
     const fetchData = async () => {
         try {
-            const [statsRes, jobsRes] = await Promise.all([
+            const [statsRes, jobsRes, postersRes] = await Promise.all([
                 axios.get("http://127.0.0.1:8000/api/placement/dashboard/"),
-                axios.get("http://127.0.0.1:8000/api/placement/jobs/")
+                axios.get("http://127.0.0.1:8000/api/placement/jobs/"),
+                axios.get("http://127.0.0.1:8000/api/placement/posters/")
             ]);
             setStats(statsRes.data.stats || []);
             setActiveJobs(jobsRes.data || []);
+            setPosters(postersRes.data || []);
         } catch (error) {
             console.error("Error fetching placement data:", error);
             toast.error("Failed to load dashboard data");
@@ -241,6 +253,46 @@ const PlacementOfficer = () => {
         }
     };
 
+    const handleCreatePoster = async (e) => {
+        e.preventDefault();
+        if (!posterFormData.image) {
+            toast.error("Please select a poster image");
+            return;
+        }
+
+        setIsSubmittingPoster(true);
+        const data = new FormData();
+        data.append('title', posterFormData.title);
+        data.append('image', posterFormData.image);
+        data.append('phone', user?.phone || user?.user_id);
+
+        try {
+            await axios.post("http://127.0.0.1:8000/api/placement/posters/", data, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            toast.success("Poster uploaded successfully!");
+            setShowPosterModal(false);
+            setPosterFormData({ title: '', image: null });
+            fetchData();
+        } catch (error) {
+            toast.error("Failed to upload poster");
+        } finally {
+            setIsSubmittingPoster(false);
+        }
+    };
+
+    const handleDeletePoster = async (posterId) => {
+        if (!window.confirm("Delete this poster?")) return;
+
+        try {
+            await axios.delete(`http://127.0.0.1:8000/api/placement/posters/${posterId}/`);
+            toast.success("Poster deleted");
+            fetchData();
+        } catch (error) {
+            toast.error("Failed to delete poster");
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="home-page flex items-center justify-center min-h-[60vh]">
@@ -319,7 +371,12 @@ const PlacementOfficer = () => {
                                     setShowCreateForm(true);
                                 }}
                                 className="apply-btn flex items-center gap-2" 
-                                style={{ width: 'auto', padding: '0.75rem 1.5rem' }}
+                                style={{ 
+                                    width: 'auto', 
+                                    padding: '0.75rem 1.5rem',
+                                    opacity: 1,
+                                    transform: 'none'
+                                }}
                             >
                                 <Plus size={20} /> Schedule New Drive
                             </button>
@@ -412,6 +469,53 @@ const PlacementOfficer = () => {
                                 </AnimatePresence>
                             </div>
                         ))}
+                    </div>
+
+                    {/* Posters List */}
+                    <div className="mt-12 flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-white">Drive Posters</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {posters.map((poster) => (
+                            <div key={poster.id} className="bg-slate-900/50 border border-white/10 rounded-2xl overflow-hidden group">
+                                <div className="aspect-4/5 relative overflow-hidden">
+                                    <img 
+                                        src={poster.image} 
+                                        alt={poster.title} 
+                                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <button 
+                                            onClick={() => handleDeletePoster(poster.id)}
+                                            className="p-3 bg-red-600 text-white rounded-full hover:bg-red-700 transition-all hover:scale-110"
+                                        >
+                                            <Trash2 size={24} />
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="p-4">
+                                    <h4 className="text-white font-semibold truncate">{poster.title}</h4>
+                                    <p className="text-slate-500 text-xs mt-1">
+                                        Posted on {new Date(poster.posted_on).toLocaleDateString()}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                        {posters.length === 0 && (
+                            <div 
+                                onClick={() => setShowPosterModal(true)}
+                                className="col-span-full py-16 text-center bg-white/5 border-2 border-dashed border-white/10 rounded-2xl cursor-pointer hover:bg-blue-600/5 hover:border-blue-500/30 transition-all group"
+                            >
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="p-4 rounded-full bg-blue-600/10 text-blue-400 group-hover:scale-110 transition-transform">
+                                        <Plus size={32} />
+                                    </div>
+                                    <p className="text-slate-400 font-medium text-lg">No posters uploaded yet.</p>
+                                    <p className="text-slate-500 text-sm">Click here to upload your first drive poster</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Create Job Modal */}
@@ -522,6 +626,15 @@ const PlacementOfficer = () => {
                         isLoading={isStatsLoading}
                         onDownload={handleDownloadStatsPDF}
                         onStudentAction={handleStudentAction}
+                    />
+
+                    <PosterModal 
+                        isOpen={showPosterModal}
+                        onClose={() => setShowPosterModal(false)}
+                        formData={posterFormData}
+                        setFormData={setPosterFormData}
+                        onSubmit={handleCreatePoster}
+                        isSubmitting={isSubmittingPoster}
                     />
                 </div>
             </section>
@@ -660,7 +773,12 @@ const StatsModal = ({ isOpen, onClose, title, data, isLoading, onDownload, onStu
                             onClick={onDownload}
                             disabled={data.length === 0}
                             className="apply-btn flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                            style={{ width: 'auto', padding: '0.75rem 1.5rem' }}
+                            style={{ 
+                                width: 'auto', 
+                                padding: '0.75rem 1.5rem',
+                                opacity: 1,
+                                transform: 'none'
+                            }}
                         >
                             <Download size={20} /> Download Full List (PDF)
                         </button>
@@ -686,5 +804,57 @@ const SimpleStatsCard = ({ icon, label, value, onClick }) => (
       <div className="stats-label">{label}</div>
     </motion.div>
   );
+
+const PosterModal = ({ isOpen, onClose, formData, setFormData, onSubmit, isSubmitting }) => (
+    <AnimatePresence>
+        {isOpen && (
+            <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md overflow-hidden"
+                >
+                    <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-white">Upload Drive Poster</h2>
+                        <button onClick={onClose} className="text-slate-400 hover:text-white">
+                            <X size={24} />
+                        </button>
+                    </div>
+                    <form onSubmit={onSubmit} className="p-6 space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-sm font-semibold text-slate-300">Poster Title</label>
+                            <input 
+                                required
+                                type="text"
+                                value={formData.title}
+                                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                placeholder="e.g. Google Recruitment 2026"
+                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-blue-500 transition-all"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-semibold text-slate-300">Select Image (PNG/JPG)</label>
+                            <input 
+                                required
+                                type="file"
+                                accept="image/png, image/jpeg"
+                                onChange={(e) => setFormData({...formData, image: e.target.files[0]})}
+                                className="w-full text-slate-400 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                            />
+                        </div>
+                        <button 
+                            disabled={isSubmitting}
+                            type="submit"
+                            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all disabled:opacity-50"
+                        >
+                            {isSubmitting ? "Uploading..." : "Upload Poster"}
+                        </button>
+                    </form>
+                </motion.div>
+            </div>
+        )}
+    </AnimatePresence>
+);
 
 export default PlacementOfficer;

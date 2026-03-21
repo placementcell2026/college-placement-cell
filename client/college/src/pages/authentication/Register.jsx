@@ -315,7 +315,7 @@ const Register = () => {
                   <Input name="roll_no" placeholder="Register No" onChange={handleChange} />
                   <Input type="date" name="dob" placeholder="Date of Birth" onChange={handleChange} />
                   <Select name="gender" options={["Male", "Female"]} onChange={handleChange} />
-                  <Input name="college" placeholder="College Name" onChange={handleChange} />
+                  <Select name="college" options={["kkmmptc"]} onChange={handleChange} />
                   <Select name="department" options={["BME","EEE","EL","CM","CT","RPA"]} onChange={handleChange} />
                   <Select name="course" options={["Diploma"]} onChange={handleChange} />
                   <Select name="semester" options={["1st","2nd","3rd","4th","5th","6th"]} onChange={handleChange} />
@@ -332,7 +332,7 @@ const Register = () => {
                   <Input 
                     icon={<ShieldCheck size={18} />} 
                     name="dept_code" 
-                    placeholder="Department Code (e.g. CTPLACE26)" 
+                    placeholder="Department Code" 
                     value={formData.dept_code}
                     onChange={handleChange} 
                     required 

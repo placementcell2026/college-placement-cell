@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -9,6 +9,25 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Custom Theme Palette */
+  --color-lime: #A3F470;
+  --color-purple: #7B68EE;
+  --color-teal: #48d1cc;
+  --color-cornflower: #96b0f5;
+  --color-sea: #70d9a8;
+}
+
+@theme {
+  --color-brand-lime: var(--color-lime);
+  --color-brand-purple: var(--color-purple);
+  --color-brand-teal: var(--color-teal);
+  --color-brand-cornflower: var(--color-cornflower);
+  --color-brand-sea: var(--color-sea);
+  
+  --color-primary: var(--color-purple);
+  --color-secondary: var(--color-teal);
+  --color-accent: var(--color-lime);
 }
 
 body {

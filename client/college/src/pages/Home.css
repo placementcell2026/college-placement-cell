@@ -4,11 +4,11 @@
   color: #e2e8f0;
   padding-bottom: 4rem;
   background: 
-    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.15) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(34, 211, 238, 0.15) 0px, transparent 50%),
-    #0f172a; /* Slate 900 base */
+    radial-gradient(at 0% 0%, rgba(163, 244, 112, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(123, 104, 238, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(72, 209, 204, 0.15) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(150, 176, 245, 0.15) 0px, transparent 50%),
+    #0a0e1a; /* Deeper dark base */
 }
 
 .section {
@@ -44,7 +44,7 @@
 }
 
 .highlight-text {
-  background: linear-gradient(135deg, #60a5fa 0%, #c084fc 100%);
+  background: linear-gradient(135deg, #7B68EE 0%, #A3F470 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -67,7 +67,7 @@
   background: rgba(96, 165, 250, 0.1);
   border: 1px solid rgba(96, 165, 250, 0.2);
   border-radius: 9999px;
-  color: #60a5fa;
+  color: #7B68EE;
   font-size: 0.875rem;
   font-weight: 600;
   backdrop-filter: blur(4px);
@@ -106,7 +106,7 @@
 
 .stats-card:hover {
   transform: translateY(-5px);
-  border-color: rgba(96, 165, 250, 0.3);
+  border-color: rgba(123, 104, 238, 0.3);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
 }
 
@@ -196,7 +196,7 @@
 }
 
 .search-input:focus ~ .search-icon-wrapper .search-icon {
-  color: #60a5fa;
+  color: #7B68EE;
 }
 
 .search-input {
@@ -220,8 +220,8 @@
 
 .search-input:focus {
   background: rgba(30, 41, 59, 0.8);
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+  border-color: #7B68EE;
+  box-shadow: 0 0 0 4px rgba(123, 104, 238, 0.15);
 }
 
 /* Content Grid */
@@ -254,7 +254,7 @@
 
 .view-all-btn {
   font-size: 0.875rem;
-  color: #60a5fa;
+  color: #7B68EE;
   font-weight: 600;
   background: rgba(59, 130, 246, 0.1);
   padding: 0.5rem 1rem;
@@ -333,7 +333,7 @@
 }
 
 .job-card:hover h3 {
-  color: #60a5fa;
+  color: #7B68EE;
 }
 
 .company-name {
@@ -371,14 +371,14 @@
   font-size: 0.875rem;
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #7B68EE 0%, #48d1cc 100%);
   border-radius: 0.75rem;
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
   opacity: 0;
   transform: translateX(10px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(123, 104, 238, 0.3);
 }
 
 .apply-btn:hover {
@@ -474,9 +474,10 @@
 }
 
 /* Utilities for Colors to match Lucide Icons */
-.text-blue-400 { color: #60a5fa !important; }
-.text-purple-400 { color: #c084fc !important; }
-.text-green-400 { color: #4ade80 !important; }
+.text-blue-400 { color: #7B68EE !important; }
+.text-purple-400 { color: #96b0f5 !important; }
+.text-green-400 { color: #A3F470 !important; }
+.text-teal-400 { color: #48d1cc !important; }
 .text-orange-400 { color: #fb923c !important; }
 .text-red-400 { color: #f87171 !important; }
 
@@ -525,7 +526,7 @@
 .roll-badge {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #60a5fa;
+  color: #7B68EE;
   background: rgba(59, 130, 246, 0.1);
   padding: 0.25rem 0.625rem;
   border-radius: 999px;

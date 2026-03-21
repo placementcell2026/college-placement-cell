@@ -13,7 +13,8 @@ import {
   Clock,
   BookOpen,
   Calendar,
-  X
+  X,
+  FileText
 } from "lucide-react";
 import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
@@ -32,6 +33,7 @@ const Student = () => {
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
   const [posters, setPosters] = React.useState([]);
   const [isPostersLoading, setIsPostersLoading] = React.useState(false);
+  const [recommendations, setRecommendations] = React.useState(null);
   
   // Web Search States
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -53,6 +55,7 @@ const Student = () => {
         setRecommendedJobs(dashRes.data.recommended_jobs || []);
         setUpcomingDrives(dashRes.data.upcoming_drives || []);
         setAllDriveDates(dashRes.data.all_drive_dates || []);
+        setRecommendations(dashRes.data.recommendations || null);
         setPosters(postersRes.data || []);
       } catch (error) {
         console.error("Error fetching student dashboard data:", error);
@@ -240,13 +243,78 @@ const Student = () => {
           <div className="content-grid">
             {/* Recommended Jobs */}
             <div className="lg:col-span-2">
+              {recommendations && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-6 mb-8 rounded-2xl bg-linear-to-br from-indigo-900/40 via-purple-900/40 to-slate-900 border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.15)] relative overflow-hidden"
+                >
+                  <div className="absolute top-[-20px] right-[-20px] p-4 opacity-5 rotate-12">
+                    <FileText size={120} className="text-purple-400" />
+                  </div>
+                  
+                  <div className="relative z-10">
+                    <h3 className="text-xl font-bold text-transparent bg-clip-text bg-linear-to-r from-purple-400 to-pink-400 mb-6 flex items-center gap-3">
+                      <span className="bg-purple-500/20 p-2 rounded-lg text-purple-400 text-xl flex items-center justify-center">📈</span> 
+                      ATS Score Booster
+                    </h3>
+                    
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {recommendations.rule_suggestions && recommendations.rule_suggestions.length > 0 && (
+                        <div className="bg-black/20 rounded-xl p-5 border border-white/5 shadow-inner">
+                          <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                            <span className="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
+                            Priority Actions
+                          </h4>
+                          <ul className="space-y-3">
+                            {recommendations.rule_suggestions.map((suggestion, idx) => (
+                              <motion.li 
+                                whileHover={{ x: 4 }}
+                                key={idx} 
+                                className="text-sm text-slate-200 flex items-start gap-3 bg-white/5 p-3 rounded-lg border border-white/5 shadow-sm hover:border-purple-500/50 transition-colors"
+                              >
+                                <div className="mt-0.5 bg-linear-to-tr from-emerald-400 to-teal-400 rounded-full p-px shadow-lg shrink-0">
+                                  <div className="bg-slate-900 rounded-full p-[2px]">
+                                    <div className="text-emerald-400 font-bold w-3 h-3 flex items-center justify-center text-[10px]">✓</div>
+                                  </div>
+                                </div>
+                                <span className="flex-1 font-medium">{suggestion}</span>
+                              </motion.li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {recommendations.ai_suggestions && (
+                        <div className="flex flex-col h-full">
+                           <div className="bg-linear-to-r from-blue-900/30 to-indigo-900/30 p-5 rounded-xl border border-blue-500/30 shadow-inner flex-1">
+                            <h4 className="text-sm font-bold text-blue-300 mb-4 flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse shadow-[0_0_8px_rgba(96,165,250,0.8)]"></div>
+                              AI Smart Review
+                            </h4>
+                            <div className="bg-white/5 p-4 rounded-lg border border-white/5">
+                              <p className="text-[13px] text-slate-300 leading-relaxed whitespace-pre-wrap font-medium italic">
+                                "{recommendations.ai_suggestions}"
+                              </p>
+                            </div>
+                            <div className="mt-4 flex items-center gap-2 text-[10px] text-blue-400 font-bold uppercase tracking-wider">
+                              <TrendingUp size={12} /> Personalized Coaching Active
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               <div className="section-header">
                 <h2 className="section-title">Eligible Jobs</h2>
                 <button className="view-all-btn" onClick={() => window.location.href='/jobs'}>
                   View All <ChevronRight size={16} />
                 </button>
               </div>
-              
+
               <div className="jobs-list">
                 {recommendedJobs.length > 0 ? (
                   recommendedJobs.map((job) => (

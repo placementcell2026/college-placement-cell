@@ -280,9 +280,9 @@ const StudentProfile = () => {
                              (profile.ats_score > 0 || (resumeFile || profile.resume)) ? `${profile.ats_score}%` : 'Not Checked'
                              : 'Not Checked'}
                          </span>
-                       </div>
-                    </div>
-                </div>
+                        </div>
+                     </div>
+                 </div>
 
                 <div className="profile-card mt-6">
                   <div className="flex justify-between items-center mb-4">
@@ -292,6 +292,7 @@ const StudentProfile = () => {
                     </a>
                   </div>
                   <div className="space-y-3">
+                    
                     {profile.eligible_jobs && profile.eligible_jobs.length > 0 ? (
                       profile.eligible_jobs.map((job) => (
                         <div key={job.id} className="p-3 rounded-lg bg-white/5 border border-white/10 hover:border-blue-500/30 transition-all cursor-pointer group">

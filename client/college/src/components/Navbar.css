@@ -50,6 +50,12 @@
   font-size: 1.25rem;
 }
 
+.logo-text-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
 .logo-text {
   font-size: 1.25rem;
   font-weight: 700;
@@ -58,6 +64,16 @@
   background-clip: text;
   color: transparent;
   transition: background 0.3s;
+  line-height: 1.2;
+}
+
+.sub-logo-text {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #9ca3af;
+  letter-spacing: 0.05em;
+  margin-top: -2px;
+  text-transform: uppercase;
 }
 
 .logo-link:hover .logo-text {

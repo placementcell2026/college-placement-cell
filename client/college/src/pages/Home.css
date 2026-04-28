@@ -34,6 +34,17 @@
   color: white;
   margin-bottom: 0.75rem;
   letter-spacing: -0.025em;
+  margin-top: 0.5rem;
+}
+
+.hero-college-name {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #7B68EE;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  display: block;
+  opacity: 0.9;
 }
 
 @media (min-width: 768px) {

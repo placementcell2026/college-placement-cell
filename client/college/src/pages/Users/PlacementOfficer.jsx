@@ -456,6 +456,7 @@ const PlacementOfficer = () => {
                     >
                         <div className="flex justify-between items-start w-full">
                             <div className="z-10 relative">
+                                <p className="hero-college-name">KKMMPTC KALLETTUMKARA</p>
                                 <h1 className="hero-title">
                                     Placement <span className="highlight-text">Officer</span> Portal
                                 </h1>
@@ -816,7 +817,7 @@ const PlacementOfficer = () => {
                                                 >
                                                     All-Year Analysis
                                                 </button>
-                                                <div className="w-[1px] h-4 bg-slate-200 mx-1"></div>
+                                                <div className="w-px h-4 bg-slate-200 mx-1"></div>
                                                 <Calendar size={14} className="text-slate-400 ml-2" />
                                                 <select 
                                                     value={isAggregatedView ? "" : reportYear}

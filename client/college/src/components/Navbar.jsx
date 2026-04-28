@@ -53,7 +53,10 @@ const Navbar = ({ user }) => {
           {/* Logo */}
           <Link to={homePath} className="logo-link group">
             <div className="logo-icon">C</div>
-            <span className="logo-text">Placement Cell</span>
+            <div className="logo-text-container">
+              <span className="logo-text">Placement Cell</span>
+              <span className="sub-logo-text">KKMMPTC KALLETTUMKARA</span>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}

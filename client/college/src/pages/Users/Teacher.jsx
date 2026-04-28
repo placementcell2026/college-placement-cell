@@ -105,6 +105,7 @@ const Teacher = () => {
                     >
                         <div className="flex justify-between items-start w-full">
                             <div className="z-10 relative">
+                                <p className="hero-college-name">KKMMPTC KALLETTUMKARA</p>
                                 <h1 className="hero-title">
                                     Welcome back, <span className="highlight-text">{user?.full_name || 'Teacher'}</span>
                                 </h1>
@@ -257,7 +258,7 @@ const Teacher = () => {
                                                     ? 'bg-blue-500/50 cursor-not-allowed shadow-none' 
                                                     : !announcement.title.trim() || !announcement.message.trim()
                                                         ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed shadow-none border border-slate-600/50'
-                                                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:shadow-blue-500/30 hover:shadow-lg'
+                                                        : 'bg-linear-to-r from-blue-600 to-indigo-600 hover:shadow-blue-500/30 hover:shadow-lg'
                                                 }`}
                                             >
                                                 {isSubmitting ? "Sending..." : "Publish Announcement"}

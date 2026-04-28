@@ -5,6 +5,7 @@ import {
   Briefcase, 
   Building2, 
   Users, 
+  User,
   TrendingUp, 
   ChevronRight,
   ChevronLeft,
@@ -14,7 +15,7 @@ import {
   BookOpen,
   Calendar,
   X,
-  FileText
+  FileText,
 } from "lucide-react";
 import { useOutletContext } from 'react-router-dom';
 import axios from 'axios';
@@ -124,6 +125,7 @@ const Student = () => {
           >
             <div className="flex justify-between items-start w-full">
               <div className="z-10 relative">
+                <p className="hero-college-name">KKMMPTC KALLETTUMKARA</p>
                 <h1 className="hero-title">
                   Welcome back, <span className="highlight-text">{user?.full_name || 'Student'}</span>
                 </h1>

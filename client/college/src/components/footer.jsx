@@ -60,17 +60,29 @@ const Footer = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="footer-bottom">
-          <p className="copyright">
-            © {new Date().getFullYear()} College Placement Cell Project. All rights
-            reserved.
-          </p>
-          <div className="made-with">
-            <span>Made with</span>
-            <Heart size={14} className="heart-icon" />
-            <span>for students</span>
-          </div>
-        </div>
+<div className="footer-bottom">
+  <p className="copyright">
+    © {new Date().getFullYear()} College Placement Cell Project. All rights
+    reserved.
+  </p>
+
+  <div className="made-with">
+    <span>Made with</span>
+    <Heart size={14} className="heart-icon" />
+    <span>for students</span>
+  </div>
+
+  <div className="developers">
+    <p className="dev-title">Designed & Developed by</p>
+    <ul className="dev-list">
+      <li>P S ABHIRAMI</li>
+      <li>KRISHNA KR</li>
+      <li>SREELAKSHMI KG</li>
+      <li>ANANDHU SHAJI</li>
+      <li>ASWINNATH M R</li>
+    </ul>
+  </div>
+</div>
       </div>
     </footer>
   );

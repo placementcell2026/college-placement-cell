@@ -4,7 +4,7 @@ from .views import (
     PlacementDashboardView, JobViewSet, PlacementOfficerProfileView,
     RegisteredStudentsView, TotalApplicationsView, ExportStudentsPDFView, ExportApplicationsPDFView,
     RegisteredTeachersView, ExportTeachersPDFView, DepartmentListView, InterviewViewSet,
-    DrivePosterViewSet
+    DrivePosterViewSet, PlacementAnalysisView
 )
 
 router = DefaultRouter()
@@ -24,4 +24,5 @@ urlpatterns = [
     path('students/export/', ExportStudentsPDFView.as_view(), name='export-students-pdf'),
     path('teachers/export/', ExportTeachersPDFView.as_view(), name='export-teachers-pdf'),
     path('applications/export/', ExportApplicationsPDFView.as_view(), name='export-applications-pdf'),
+    path('analysis/', PlacementAnalysisView.as_view(), name='placement-analysis'),
 ]

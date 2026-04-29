@@ -304,3 +304,11 @@ class DrivePoster(models.Model):
 
     def __str__(self):
         return self.title
+
+class PlacementReport(models.Model):
+    year = models.IntegerField(unique=True)
+    report_data = models.JSONField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Placement Report - {self.year}"

@@ -4,6 +4,7 @@ import {
   Briefcase, 
   Building, 
   Users, 
+  User,
   Plus, 
   FileText, 
   Download, 

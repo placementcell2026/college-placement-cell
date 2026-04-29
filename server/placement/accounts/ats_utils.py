@@ -314,7 +314,88 @@ def check_resume_sections(text):
     for section, keywords in SECTION_KEYWORDS.items():
         if any(kw in text for kw in keywords):
             present.append(section)
-        else:
-            missing.append(section)
-
     return present, missing
+
+def get_missing_skills(resume_text, job):
+    resume_words = resume_text.lower()
+    required_skills = job.skills_required.lower().split(",")
+    missing = []
+    for skill in required_skills:
+        skill_clean = skill.strip()
+        if skill_clean and skill_clean not in resume_words:
+            missing.append(skill_clean)
+    return missing
+
+def check_sections(resume_text):
+    text_lower = resume_text.lower()
+    sections = {
+        "projects": "project" in text_lower,
+        "internship": "intern" in text_lower or "internship" in text_lower,
+        "summary": "summary" in text_lower or "objective" in text_lower,
+        "skills": "skills" in text_lower,
+    }
+    return sections
+
+def generate_recommendations(student, resume_text, job):
+    suggestions = []
+    # Skill gap
+    missing_skills = get_missing_skills(resume_text, job)
+    if missing_skills:
+        suggestions.append(f"Add missing skills: {', '.join(missing_skills)}")
+
+    # Sections
+    sections = check_sections(resume_text)
+    if not sections["projects"]:
+        suggestions.append("Add at least 2 academic or personal projects")
+    if not sections["internship"]:
+        suggestions.append("Include internship or practical experience")
+    if not sections["summary"]:
+        suggestions.append("Add a professional summary at the top")
+    
+    # Missing basic sections formatting
+    if not sections["projects"] and not sections["skills"]:
+        suggestions.append("Fix formatting (use bullet points for skills and projects)")
+
+    # CGPA logic
+    try:
+        if float(student.overall_cgpa) < 7:
+            suggestions.append("Highlight skills and projects instead of CGPA")
+    except:
+        pass
+
+    # Backlogs
+    try:
+        if int(student.total_backlogs) > 0:
+            suggestions.append("Add certifications to strengthen profile")
+    except:
+        pass
+
+    return suggestions
+
+def ai_recommendation(resume_text):
+    try:
+        import os
+        from huggingface_hub import InferenceClient
+        hf_key = os.environ.get("HUGGINGFACE_API_KEY", "")
+        # Dummy AI suggestion if no keys
+        prompt = f"Analyze this resume and suggest improvements to make it ATS friendly:\n\n{resume_text[:2000]}"
+        if hf_key:
+            client = InferenceClient(api_key=hf_key)
+            response = client.text_generation(
+                model="google/flan-t5-large",
+                inputs=prompt
+            )
+            return response
+        else:
+            return "Make sure to improve resume summary, add measurable achievements, and use bullet points for clarity."
+    except Exception as e:
+        print(f"AI Recommendation Error: {e}")
+        return "Ensure clear formatting, quantifiable achievements, and concise bullet points."
+
+def final_recommendation(student, resume_text, job):
+    rule_based = generate_recommendations(student, resume_text, job)
+    ai_based = ai_recommendation(resume_text)
+    return {
+        "rule_suggestions": rule_based,
+        "ai_suggestions": ai_based
+    }

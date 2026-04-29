@@ -70,8 +70,27 @@ class StudentDashboardView(APIView):
                 {"id": j.id, "company": j.company, "role": j.role, "month": j.deadline.strftime('%b').upper(), "day": j.deadline.strftime('%d'), "time": j.deadline.strftime('%H:%M %p')}
                 for j in eligible_jobs[:3]
             ],
-            "all_drive_dates": drive_dates
+            "all_drive_dates": drive_dates,
+            "recommendations": None
         }
+
+        # Generate Recommendations if resume exists
+        if student.resume and eligible_jobs.exists():
+            try:
+                from accounts.ats_utils import extract_resume_text, final_recommendation
+                # Open the file and extract text
+                with student.resume.open('rb') as f:
+                    resume_text = extract_resume_text(f)
+                
+                if resume_text:
+                    # Use first eligible job for recommendations
+                    target_job = eligible_jobs.first()
+                    data["recommendations"] = final_recommendation(student, resume_text, target_job)
+            except Exception as e:
+                import traceback
+                print(f"Recommendation generation error: {e}")
+                traceback.print_exc()
+
         return Response(data)
 
 class JobApplicationView(APIView):
@@ -158,6 +177,24 @@ class StudentProfileView(APIView):
             
             job_serializer = JobSerializer(eligible_jobs, many=True)
             data["eligible_jobs"] = job_serializer.data
+
+            # Generate Recommendations if resume exists
+            data["recommendations"] = None
+            if student.resume and eligible_jobs.exists():
+                try:
+                    from accounts.ats_utils import extract_resume_text, final_recommendation
+                    # Open the file and extract text
+                    with student.resume.open('rb') as f:
+                        resume_text = extract_resume_text(f)
+                    
+                    if resume_text:
+                        # Use first eligible job for recommendations
+                        target_job = eligible_jobs.first()
+                        data["recommendations"] = final_recommendation(student, resume_text, target_job)
+                except Exception as e:
+                    import traceback
+                    print(f"Recommendation generation error: {e}")
+                    traceback.print_exc()
 
             return Response(data)
         except Student.DoesNotExist:

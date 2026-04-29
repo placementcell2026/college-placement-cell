@@ -3,8 +3,23 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.http import HttpResponse
-from accounts.models import Job, JobApplication, Student, PlacementOfficer, Teacher, Interview, DrivePoster
+from accounts.models import Job, JobApplication, Student, PlacementOfficer, Teacher, Interview, DrivePoster, PlacementReport
 from accounts.serializers import JobSerializer, JobApplicationSerializer, InterviewSerializer, DrivePosterSerializer
+from django.conf import settings
+import io
+import os
+from .analysis_utils import analyze_placement_data
+
+# Try to import reportlab, if not available, we will handle it
+try:
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
 
 class DrivePosterViewSet(viewsets.ModelViewSet):
     queryset = DrivePoster.objects.all().order_by('-posted_on')
@@ -21,19 +36,6 @@ class DrivePosterViewSet(viewsets.ModelViewSet):
                 serializer.save()
         else:
             serializer.save()
-
-import io
-
-# Try to import reportlab, if not available, we will handle it
-try:
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import letter
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet
-    REPORTLAB_AVAILABLE = True
-except ImportError:
-    REPORTLAB_AVAILABLE = False
 
 class PlacementDashboardView(APIView):
     def get(self, request):
@@ -126,7 +128,6 @@ class InterviewViewSet(viewsets.ModelViewSet):
         return super().get_queryset()
 
 class PlacementOfficerProfileView(APIView):
-    # ... (existing profile view code)
     def get(self, request):
         phone = request.query_params.get('phone')
         try:
@@ -215,17 +216,25 @@ class ExportStudentsPDFView(APIView):
             return Response({"error": "PDF library not available"}, status=500)
             
         students = Student.objects.all().select_related('user')
+        department = request.query_params.get('department')
+        if department and department != 'All':
+            students = students.filter(department=department)
+            
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=letter)
         elements = []
         styles = getSampleStyleSheet()
         
-        elements.append(Paragraph("Registered Students Report", styles['Title']))
+        title_text = "Registered Students Report"
+        if department and department != 'All':
+            title_text += f" - {department}"
+            
+        elements.append(Paragraph(title_text, styles['Title']))
         elements.append(Spacer(1, 12))
         
         data = [["Name", "Email", "Department", "CGPA"]]
         for s in students:
-            data.append([s.user.full_name, s.user.email, s.department, f"{s.overall_cgpa:.2f}"])
+            data.append([s.user.full_name, s.user.email, s.department, f"{s.overall_cgpa:.2f}" if s.overall_cgpa else "N/A"])
             
         table = Table(data)
         table.setStyle(TableStyle([
@@ -240,7 +249,8 @@ class ExportStudentsPDFView(APIView):
         doc.build(elements)
         buffer.seek(0)
         response = HttpResponse(buffer, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="registered_students.pdf"'
+        filename = f"registered_students_{department}.pdf" if department and department != 'All' else "registered_students.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
 
 class ExportApplicationsPDFView(APIView):
@@ -360,3 +370,80 @@ class DepartmentListView(APIView):
                 "teachers": teacher_list
             })
         return Response(data)
+
+class PlacementAnalysisView(APIView):
+    def post(self, request):
+        sheet_url = request.data.get('sheet_url')
+        report_year = request.data.get('report_year')
+
+        if not report_year:
+            return Response({"error": "Please select a year for this report"}, status=status.HTTP_400_BAD_REQUEST)
+
+        analysis_results = None
+        if sheet_url:
+            try:
+                analysis_results = analyze_placement_data(sheet_url)
+            except Exception as e:
+                return Response({"error": f"Link Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        elif 'file' in request.FILES:
+            excel_file = request.FILES['file']
+            temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_reports')
+            os.makedirs(temp_dir, exist_ok=True)
+            temp_path = os.path.join(temp_dir, excel_file.name)
+            
+            with open(temp_path, 'wb+') as destination:
+                for chunk in excel_file.chunks():
+                    destination.write(chunk)
+            
+            try:
+                analysis_results = analyze_placement_data(temp_path)
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+            except Exception as e:
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                return Response({"error": f"File Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        else:
+            return Response({"error": "No file or sheet URL provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check for errors in analysis logic
+        if analysis_results and "error" in analysis_results:
+            return Response(analysis_results, status=status.HTTP_400_BAD_REQUEST)
+
+        # Save to database
+        if analysis_results:
+            try:
+                report, created = PlacementReport.objects.update_or_create(
+                    year=report_year,
+                    defaults={'report_data': analysis_results}
+                )
+                analysis_results['saved_year'] = report_year
+                return Response(analysis_results)
+            except Exception as e:
+                return Response({"error": f"Database Error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response({"error": "Analysis failed to generate results"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def get(self, request):
+        year = request.query_params.get('year')
+        is_aggregated = request.query_params.get('aggregated') == 'true'
+
+        if is_aggregated:
+            reports = PlacementReport.objects.all().order_by('year')
+            if not reports.exists():
+                return Response({"error": "No reports available for aggregated analysis"}, status=status.HTTP_404_NOT_FOUND)
+            
+            from .analysis_utils import combine_reports
+            combined_data = combine_reports([r.report_data for r in reports])
+            return Response(combined_data)
+
+        if year:
+            try:
+                report = PlacementReport.objects.get(year=year)
+                return Response(report.report_data)
+            except PlacementReport.DoesNotExist:
+                return Response({"error": "No report found for this year"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Return all available years if no specific year requested
+        years = PlacementReport.objects.values_list('year', flat=True).order_by('-year')
+        return Response({"available_years": list(years)})

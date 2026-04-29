@@ -13,7 +13,6 @@ from .ats_utils import (
     find_missing_skills,
     check_resume_sections
 )
-from django.contrib.auth.hashers import make_password
 
 from django.contrib.auth.hashers import make_password
 from captcha.models import CaptchaStore
@@ -26,7 +25,7 @@ class CaptchaView(APIView):
         image_url = captcha_image_url(key)
         # Ensure image_url is absolute for the frontend
         if not image_url.startswith('http'):
-            image_url = f"http://127.0.0.1:8000{image_url}"
+            image_url = request.build_absolute_uri(image_url)
         return Response({"captcha_key": key, "captcha_image": image_url})
 
 class RegisterView(APIView):
